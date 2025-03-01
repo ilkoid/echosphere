@@ -1,6 +1,8 @@
 package apis
 
-import "time"
+import (
+	"time"
+)
 
 type MarketplaceAPI interface {
 	// GetFeedback() ([]Review, error)
