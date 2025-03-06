@@ -9,6 +9,7 @@ type MarketplaceAPI interface {
 	// GetNumberUnanswered() (NumberOfUnanswered, error)
 }
 
+// TODO: ADD BARCODE
 type ReviewCondensed struct {
 	ID          string
 	PublishedAt time.Time // time.Time
