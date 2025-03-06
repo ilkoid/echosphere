@@ -101,3 +101,29 @@ type WBProductDetails struct {
 	Video          Video
 	PhotoLinks     []PhotoLink
 }
+
+func ConvertWbIntoCondensed(f FeedbackResponse) []WBReviewCondensed {
+	res := []WBReviewCondensed{}
+	for _, feedback := range f.Data.Feedbacks {
+		cur := WBReviewCondensed{
+			ID:               feedback.ID,
+			UserName:         feedback.UserName,
+			CreatedDate:      feedback.CreatedDate,
+			ProductValuation: feedback.ProductValuation,
+			State:            feedback.State,
+			Text:             feedback.Text,
+			Answer:           feedback.Answer,
+			Product: WBProductDetails{
+				ProductDetails: feedback.ProductDetails,
+				MatchingSize:   feedback.MatchingSize,
+				Color:          feedback.Color,
+				Pros:           feedback.Pros,
+				Cons:           feedback.Cons,
+				Video:          feedback.Video,
+				PhotoLinks:     feedback.PhotoLinks,
+			},
+		}
+		res = append(res, cur)
+	}
+	return res
+}

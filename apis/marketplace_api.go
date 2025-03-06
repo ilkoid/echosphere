@@ -1,6 +1,8 @@
 package apis
 
 import (
+	ozon "echosphere/apis/ozon"
+	wb "echosphere/apis/wb"
 	"time"
 )
 
@@ -25,7 +27,7 @@ type Product struct {
 	Name   string
 }
 
-func ConvertOzonReview(ozonReview OzonReviewCondensed) ReviewCondensed {
+func ConvertOzonReview(ozonReview ozon.OzonReviewCondensed) ReviewCondensed {
 	return ReviewCondensed{
 		ID:          ozonReview.ID,
 		PublishedAt: ozonReview.PublishedAt,
@@ -40,7 +42,7 @@ func ConvertOzonReview(ozonReview OzonReviewCondensed) ReviewCondensed {
 	}
 }
 
-func ConvertWBReview(wbReview WBReviewCondensed) ReviewCondensed {
+func ConvertWBReview(wbReview wb.WBReviewCondensed) ReviewCondensed {
 	return ReviewCondensed{
 		ID:          wbReview.ID,
 		PublishedAt: wbReview.CreatedDate,
