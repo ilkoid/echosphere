@@ -4,7 +4,7 @@ import (
 	wb "echosphere/apis/wb"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	// ozon "echosphere/apis/ozon"
@@ -36,7 +36,7 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to read response body: %v", err), http.StatusInternalServerError)
 		return
