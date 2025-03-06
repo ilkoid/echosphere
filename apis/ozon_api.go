@@ -173,6 +173,7 @@ type VisibilityDetails struct {
 
 // ------------------- DATA STRUCT FOR HUMAN USAGE ----------------------
 
+// TODO: ADD BARCODE
 type OzonReviewCondensed struct {
 	ID          string
 	PublishedAt time.Time

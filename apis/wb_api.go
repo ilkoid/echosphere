@@ -80,6 +80,7 @@ type PhotoLink struct {
 
 // ------------------- DATA STRUCT FOR HUMAN USAGE ----------------------
 
+// TODO: ADD BARCODE
 type WBReviewCondensed struct {
 	ID               string
 	UserName         string
