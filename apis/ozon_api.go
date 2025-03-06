@@ -185,8 +185,8 @@ type OzonReviewCondensed struct {
 }
 
 type OzonItemCondensed struct {
-	ID                    int
-	TypeID                int
+	ID                    int // nmId
+	TypeID                int // ImtId
 	DescriptionCategoryID int
 	Name                  string
 	Barcodes              []string
