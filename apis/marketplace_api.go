@@ -1,8 +1,6 @@
 package apis
 
 import (
-	ozon "echosphere/apis/ozon"
-	wb "echosphere/apis/wb"
 	"time"
 )
 
@@ -25,34 +23,4 @@ type Product struct {
 	ID     int // ImtId
 	TypeID int // NmId
 	Name   string
-}
-
-func ConvertOzonReview(ozonReview ozon.OzonReviewCondensed) ReviewCondensed {
-	return ReviewCondensed{
-		ID:          ozonReview.ID,
-		PublishedAt: ozonReview.PublishedAt,
-		Status:      ozonReview.Status,
-		Rating:      int(ozonReview.Rating),
-		Text:        ozonReview.Text,
-		Product: Product{
-			ID:     ozonReview.Product.ID,
-			TypeID: ozonReview.Product.TypeID,
-			Name:   ozonReview.Product.Name,
-		},
-	}
-}
-
-func ConvertWBReview(wbReview wb.WBReviewCondensed) ReviewCondensed {
-	return ReviewCondensed{
-		ID:          wbReview.ID,
-		PublishedAt: wbReview.CreatedDate,
-		Status:      wbReview.State,
-		Rating:      wbReview.ProductValuation,
-		Text:        wbReview.Text,
-		Product: Product{
-			ID:     wbReview.Product.ProductDetails.ImtId, // ImtId как ID товара
-			TypeID: wbReview.Product.ProductDetails.NmId,  // NmId как TypeID
-			Name:   wbReview.Product.ProductDetails.ProductName,
-		},
-	}
 }
