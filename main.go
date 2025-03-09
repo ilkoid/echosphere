@@ -3,8 +3,15 @@ package main
 import (
 	"echosphere/apis"
 	wb "echosphere/apis/wb"
+	"echosphere/google_sheets"
 	"fmt"
 	"net/http"
+)
+
+const (
+	spreadsheetID   = "1TKuEZvJsnqfkolxXtQzDPPUxdtDEVrtgjvCrVhnAA2o"
+	sheetRange      = "Лист1!A1:B"
+	credentialsFile = "credentials.json"
 )
 
 func handle_wb(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +28,12 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 
 	wb_reviews, _ := wb_api.GetFeedback(config)
 	fmt.Printf("%+v\n", wb_reviews)
+	values := google_sheets.PrepareDataForSheets(wb_reviews)
+
+	if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to write to Google Sheets: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
