@@ -11,7 +11,7 @@ import (
 const (
 	spreadsheetID   = "1TKuEZvJsnqfkolxXtQzDPPUxdtDEVrtgjvCrVhnAA2o"
 	sheetRange      = "Лист1!A1:B"
-	credentialsFile = "credentials.json"
+	credentialsFile = "/etc/google_sheets_credentials.json"
 )
 
 func handle_wb(w http.ResponseWriter, r *http.Request) {
@@ -20,14 +20,13 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	wb_api := wb.WBAPI{}
 	config := apis.FeedbackRequestConfig{
 		IsAnswered: false,
-		Take:       1,
+		Take:       10,
 		Skip:       0,
 		DateFrom:   nil,
 		DateTo:     nil,
 	}
 
 	wb_reviews, _ := wb_api.GetFeedback(config)
-	fmt.Printf("%+v\n", wb_reviews)
 	values := google_sheets.PrepareDataForSheets(wb_reviews)
 
 	if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {
