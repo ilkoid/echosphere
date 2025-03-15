@@ -21,6 +21,7 @@ func ConvertWBReview(wbReview Feedback) apis.ReviewCondensed {
 			TypeID: wbReview.ProductDetails.ImtId, // ImtId как TypeID
 			Name:   wbReview.ProductDetails.ProductName,
 		},
+		Response: wbReview.Answer.Text,
 	}
 }
 
