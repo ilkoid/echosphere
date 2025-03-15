@@ -4,6 +4,7 @@ import (
 	"echosphere/apis"
 	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
+	gigachat "echosphere/llm/gigachat"
 	"fmt"
 	"net/http"
 )
@@ -27,8 +28,19 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wb_reviews, _ := wb_api.GetFeedback(config)
-	values := google_sheets.PrepareDataForSheets(wb_reviews)
 
+	largeLanguageModel := gigachat.GigachatAPI{}
+
+	// fmt.Printf("Before: %v\n", wb_reviews)
+
+	wb_reviews, err := largeLanguageModel.MakeResponse(wb_reviews)
+	if err != nil {
+		fmt.Printf("Error was: %v\n", err)
+	}
+
+	// fmt.Printf("After: %v\n", wb_reviews)
+
+	values := google_sheets.PrepareDataForSheets(wb_reviews)
 	if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to write to Google Sheets: %v", err), http.StatusInternalServerError)
 		return
