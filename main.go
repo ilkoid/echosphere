@@ -21,7 +21,7 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	wb_api := wb.WBAPI{}
 	config := apis.FeedbackRequestConfig{
 		IsAnswered: false,
-		Take:       10,
+		Take:       50,
 		Skip:       0,
 		DateFrom:   nil,
 		DateTo:     nil,
