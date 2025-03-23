@@ -49,16 +49,18 @@ func (g *GigachatAPI) MakeResponse(reviews []apis.ReviewCondensed) ([]apis.Revie
 				"  \"model\": \"GigaChat\",\n"+
 				"  \"messages\": [\n"+
 				"    {\n"+
+				"      \"role\": \"system\",\n"+
+				"      \"content\": \"Ты профессиональный маркетолог и выступаешь от лица компании Play Today. Не дублируй сообщение в отзыве. Не оставляй контактных данных(номера телефонов, электронных почт) и не пиши про возврат товара или его замену на другой\"\n"+
+				"    },\n"+
+				"    {\n"+
 				"      \"role\": \"user\",\n"+
-				"      \"content\": \"Твоя задача кратко отвечать на отзыв (около 15-50 слов в твоем ответе). Также учитывай настроение отзыва (позитивный, отрицательный и тд тона) и не дублируй сообщение в отзыве. Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s\"\n"+
-
+				"      \"content\": \"Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s\"\n"+
 				"    }\n"+
 				"  ],\n"+
 				"  \"stream\": false,\n"+
 				"  \"repetition_penalty\": 1\n"+
 				"}\n",
 			reviews[i].Product.Name, reviews[i].Rating, reviews[i].Text)
-
 		req, err := http.NewRequest("POST", url, strings.NewReader(rawData))
 		if err != nil {
 			return []apis.ReviewCondensed{}, err
