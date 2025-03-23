@@ -22,6 +22,7 @@ func ConvertWBReview(wbReview Feedback) apis.ReviewCondensed {
 			Name:   wbReview.ProductDetails.ProductName,
 		},
 		Response: wbReview.Answer.Text,
+        Mood: "",
 	}
 }
 
