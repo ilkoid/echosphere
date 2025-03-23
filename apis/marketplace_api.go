@@ -26,6 +26,7 @@ type ReviewCondensed struct {
 	Text        string
 	Product     Product // OzonItem,  WBProductDetails
 	Response    string  // "" when there is no answer
+	Mood        string  // "" when initialized
 }
 
 type Product struct {
