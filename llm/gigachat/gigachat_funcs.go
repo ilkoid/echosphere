@@ -146,6 +146,64 @@ func GetReviewMood(accessToken string, url string, productName string, rating in
 	return response.Choices[0].Message.Content, nil
 }
 
+func GetReviewKeyWord(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+	requestData := GigachatChatCompletionRequest{
+		Model: "GigaChat",
+		Messages: []GigachatMessageContent{
+			{
+				Role:    "system",
+				Content: "Ты профессиональный оценщик отзывов. Твоя задача выписать 1-3 ключевых слова относящихся к товару.",
+			},
+			{
+				Role:    "user",
+				Content: fmt.Sprintf("отзыв: %s", reviewText),
+			},
+		},
+		TopP:              0.5,
+		RepetitionPenalty: 1,
+		Stream:            false,
+		UpdateInterval:    1,
+	}
+
+	requestJson, err := json.Marshal(requestData)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(requestJson)))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: tr}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", err
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var response GigachatChatCompletion
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", err
+	}
+
+	return response.Choices[0].Message.Content, nil
+}
+
 func (g *GigachatAPI) MakeResponse(reviews []apis.ReviewCondensed) ([]apis.ReviewCondensed, error) {
 	accessToken, err := GetAccesToken()
 	if err != nil {
@@ -170,8 +228,15 @@ func (g *GigachatAPI) MakeResponse(reviews []apis.ReviewCondensed) ([]apis.Revie
 			return reviews, err
 		}
 
+		reviewKeyWord, err := GetReviewKeyWord(accessToken, url, reviews[i].Product.Name, reviews[i].Rating, reviews[i].Text)
+		if err != nil {
+			return reviews, err
+		}
+
 		reviews[i].Response = reviewResponse
 		reviews[i].Mood = reviewMood
+		reviews[i].KeyWords = reviewKeyWord
+
 	}
 
 	return reviews, nil
