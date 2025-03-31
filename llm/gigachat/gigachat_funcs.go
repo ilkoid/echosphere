@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"echosphere/apis"
+	"echosphere/llm"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,13 +32,19 @@ func GetAccesToken() (string, error) {
 }
 
 func GetReviewRespone(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+	requestHeaders, err := llm.GetRequestHeader("config.yaml")
+	if err != nil {
+		return "", err
+	}
 	requestData := GigachatChatCompletionRequest{
 		Model: "GigaChat",
 		Messages: []GigachatMessageContent{
 			{
 				Role:    "system",
-				Content: "Ты профессиональный специалист клиентской службы Play Today. Не дублируй сообщение в отзыве. Не оставляй контактных данных(номера телефонов, электронных почт) и не пиши про возврат товара или его замену на другой",
+				Content: requestHeaders.ResponseHeader,
+				// Content: "Ты профессиональный специалист клиентской службы Play Today. Не дублируй сообщение в отзыве. Не оставляй контактных данных(номера телефонов, электронных почт) и не пиши про возврат товара или его замену на другой",
 			},
+
 			{
 				Role:    "user",
 				Content: fmt.Sprintf("Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s", productName, rating, reviewText),
@@ -89,12 +96,17 @@ func GetReviewRespone(accessToken string, url string, productName string, rating
 }
 
 func GetReviewMood(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+	requestHeaders, err := llm.GetRequestHeader("config.yaml")
+	if err != nil {
+		return "", err
+	}
 	requestData := GigachatChatCompletionRequest{
 		Model: "GigaChat",
 		Messages: []GigachatMessageContent{
 			{
 				Role:    "system",
-				Content: "Ты профессиональный оценщик отзывов. Твоя задача оценить одним словом тональность (позитивный, нейтральный, негативный) отзыва.",
+				Content: requestHeaders.MoodHeader,
+				// Content: "Ты профессиональный оценщик отзывов. Твоя задача оценить одним словом тональность (позитивный, нейтральный, негативный) отзыва.",
 			},
 			{
 				Role:    "user",
@@ -147,12 +159,17 @@ func GetReviewMood(accessToken string, url string, productName string, rating in
 }
 
 func GetReviewKeyWord(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+	requestHeaders, err := llm.GetRequestHeader("config.yaml")
+	if err != nil {
+		return "", err
+	}
 	requestData := GigachatChatCompletionRequest{
 		Model: "GigaChat",
 		Messages: []GigachatMessageContent{
 			{
 				Role:    "system",
-				Content: "Ты профессиональный оценщик отзывов. Твоя задача выписать 1-3 ключевых слова относящихся к товару.",
+				Content: requestHeaders.KeyWordsHeader,
+				// Content: "Ты профессиональный оценщик отзывов. Твоя задача выписать 1-3 ключевых слова относящихся к товару.",
 			},
 			{
 				Role:    "user",
@@ -205,6 +222,7 @@ func GetReviewKeyWord(accessToken string, url string, productName string, rating
 }
 
 func (g *GigachatAPI) MakeResponse(reviews []apis.ReviewCondensed) ([]apis.ReviewCondensed, error) {
+
 	accessToken, err := GetAccesToken()
 	if err != nil {
 		return []apis.ReviewCondensed{}, err
