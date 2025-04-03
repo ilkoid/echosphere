@@ -31,23 +31,28 @@ func GetAccesToken() (string, error) {
 	return res, err
 }
 
-func GetReviewRespone(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+func (g *GigachatAPI) GenerateResponse(review apis.ReviewCondensed, context string) (string, error) {
 	requestHeaders, err := llm.GetRequestHeader("config.yaml")
 	if err != nil {
 		return "", err
 	}
+
+	content := fmt.Sprintf("Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s. ", review.Product.Name, review.Rating, review.Text)
+	if context != "" {
+		content = content + context
+	}
+
 	requestData := GigachatChatCompletionRequest{
 		Model: "GigaChat",
 		Messages: []GigachatMessageContent{
 			{
 				Role:    "system",
 				Content: requestHeaders.ResponseHeader,
-				// Content: "Ты профессиональный специалист клиентской службы Play Today. Не дублируй сообщение в отзыве. Не оставляй контактных данных(номера телефонов, электронных почт) и не пиши про возврат товара или его замену на другой",
 			},
 
 			{
 				Role:    "user",
-				Content: fmt.Sprintf("Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s", productName, rating, reviewText),
+				Content: content,
 			},
 		},
 		TopP:              0.5,
@@ -60,14 +65,14 @@ func GetReviewRespone(accessToken string, url string, productName string, rating
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(requestJson)))
+	req, err := http.NewRequest("POST", g.completionURL, strings.NewReader(string(requestJson)))
 	if err != nil {
 		return "", err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", "Bearer "+g.accessToken)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -95,22 +100,27 @@ func GetReviewRespone(accessToken string, url string, productName string, rating
 	return response.Choices[0].Message.Content, nil
 }
 
-func GetReviewMood(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+func (g *GigachatAPI) GetMood(review apis.ReviewCondensed, context string) (string, error) {
 	requestHeaders, err := llm.GetRequestHeader("config.yaml")
 	if err != nil {
 		return "", err
 	}
+
+	content := fmt.Sprintf("Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s. ", review.Product.Name, review.Rating, review.Text)
+	if context != "" {
+		content = content + context
+	}
+
 	requestData := GigachatChatCompletionRequest{
 		Model: "GigaChat",
 		Messages: []GigachatMessageContent{
 			{
 				Role:    "system",
 				Content: requestHeaders.MoodHeader,
-				// Content: "Ты профессиональный оценщик отзывов. Твоя задача оценить одним словом тональность (позитивный, нейтральный, негативный) отзыва.",
 			},
 			{
 				Role:    "user",
-				Content: fmt.Sprintf("Исходи что товар - %s, а его оценка, которую ему присвоили - %d. Ответь на слудющий отзыв: %s", productName, rating, reviewText),
+				Content: content,
 			},
 		},
 		TopP:              0.5,
@@ -123,14 +133,14 @@ func GetReviewMood(accessToken string, url string, productName string, rating in
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(requestJson)))
+	req, err := http.NewRequest("POST", g.completionURL, strings.NewReader(string(requestJson)))
 	if err != nil {
 		return "", err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", "Bearer "+g.accessToken)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -158,22 +168,27 @@ func GetReviewMood(accessToken string, url string, productName string, rating in
 	return response.Choices[0].Message.Content, nil
 }
 
-func GetReviewKeyWord(accessToken string, url string, productName string, rating int, reviewText string) (string, error) {
+func (g *GigachatAPI) FindKeywords(review apis.ReviewCondensed, context string) (string, error) {
 	requestHeaders, err := llm.GetRequestHeader("config.yaml")
 	if err != nil {
 		return "", err
 	}
+
+	content := fmt.Sprintf("Отзыв: %s", review.Text)
+	if context != "" {
+		content = content + context
+	}
+
 	requestData := GigachatChatCompletionRequest{
 		Model: "GigaChat",
 		Messages: []GigachatMessageContent{
 			{
 				Role:    "system",
 				Content: requestHeaders.KeyWordsHeader,
-				// Content: "Ты профессиональный оценщик отзывов. Твоя задача выписать 1-3 ключевых слова относящихся к товару.",
 			},
 			{
 				Role:    "user",
-				Content: fmt.Sprintf("отзыв: %s", reviewText),
+				Content: content,
 			},
 		},
 		TopP:              0.5,
@@ -186,14 +201,14 @@ func GetReviewKeyWord(accessToken string, url string, productName string, rating
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(requestJson)))
+	req, err := http.NewRequest("POST", g.completionURL, strings.NewReader(string(requestJson)))
 	if err != nil {
 		return "", err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", "Bearer "+g.accessToken)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -219,43 +234,4 @@ func GetReviewKeyWord(accessToken string, url string, productName string, rating
 	}
 
 	return response.Choices[0].Message.Content, nil
-}
-
-func (g *GigachatAPI) MakeResponse(reviews []apis.ReviewCondensed) ([]apis.ReviewCondensed, error) {
-
-	accessToken, err := GetAccesToken()
-	if err != nil {
-		return []apis.ReviewCondensed{}, err
-	}
-
-	url := "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
-
-	for i := range reviews {
-		if len(reviews[i].Text) == 0 {
-			// implement some templated responses without the use of llms...
-			continue
-		}
-
-		reviewResponse, err := GetReviewRespone(accessToken, url, reviews[i].Product.Name, reviews[i].Rating, reviews[i].Text)
-		if err != nil {
-			return reviews, err
-		}
-
-		reviewMood, err := GetReviewMood(accessToken, url, reviews[i].Product.Name, reviews[i].Rating, reviews[i].Text)
-		if err != nil {
-			return reviews, err
-		}
-
-		reviewKeyWord, err := GetReviewKeyWord(accessToken, url, reviews[i].Product.Name, reviews[i].Rating, reviews[i].Text)
-		if err != nil {
-			return reviews, err
-		}
-
-		reviews[i].Response = reviewResponse
-		reviews[i].Mood = reviewMood
-		reviews[i].KeyWords = reviewKeyWord
-
-	}
-
-	return reviews, nil
 }
