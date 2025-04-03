@@ -5,6 +5,7 @@ import (
 	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
 	gigachat "echosphere/llm/gigachat"
+	processer "echosphere/process"
 	"fmt"
 	"net/http"
 )
@@ -16,12 +17,10 @@ const (
 )
 
 func handle_wb(w http.ResponseWriter, r *http.Request) {
-	// http.Error(w, fmt.Sprintf("Failed to parse JSON response: %v", err), http.StatusInternalServerError)
-
 	wb_api := wb.WBAPI{}
 	config := apis.FeedbackRequestConfig{
 		IsAnswered: false,
-		Take:       50,
+		Take:       10,
 		Skip:       0,
 		DateFrom:   nil,
 		DateTo:     nil,
@@ -29,18 +28,13 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 
 	wb_reviews, _ := wb_api.GetFeedback(config)
 
-	largeLanguageModel := gigachat.GigachatAPI{}
-
-	// fmt.Printf("Before: %v\n", wb_reviews)
-
-	wb_reviews, err := largeLanguageModel.MakeResponse(wb_reviews)
+	reviewProcesser := processer.NewLLMReviewProcesser(gigachat.GetGigachatAPI(), processer.LLMResponseGenerator{}, processer.LLMMoodRecognizer{}, processer.LLMKeywordFinder{})
+	processedReviews, err := reviewProcesser.ProcessReviews(wb_reviews)
 	if err != nil {
 		fmt.Printf("Error was: %v\n", err)
 	}
 
-	// fmt.Printf("After: %v\n", wb_reviews)
-
-	values := google_sheets.PrepareDataForSheets(wb_reviews)
+	values := google_sheets.PrepareDataForSheets(processedReviews)
 	if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to write to Google Sheets: %v", err), http.StatusInternalServerError)
 		return

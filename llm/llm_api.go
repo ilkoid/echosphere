@@ -8,8 +8,9 @@ import (
 )
 
 type LargeLanguageModelAPI interface {
-	MakeResponse(reviews []apis.ReviewCondensed) ([]apis.ReviewCondensed, error)
-	// GetFeelings(reviews []apis.ReviewCondensed) []apis.ReviewCondensed // to be added later
+	GenerateResponse(review apis.ReviewCondensed, context string) (string, error)
+	GetMood(review apis.ReviewCondensed, context string) (string, error)
+	FindKeywords(review apis.ReviewCondensed, context string) (string, error)
 }
 
 type LlmRequestHeaders struct {
