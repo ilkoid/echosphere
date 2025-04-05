@@ -2,7 +2,7 @@ package google_sheets
 
 import (
 	"context"
-	"echosphere/apis"
+	processer "echosphere/process"
 	"fmt"
 	"os"
 	"reflect"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
-func PrepareDataForSheets(reviews []apis.ReviewCondensed) [][]interface{} {
+func PrepareDataForSheets(reviews []processer.ReviewProcessed) [][]interface{} {
 	if len(reviews) == 0 {
 		return [][]interface{}{}
 	}

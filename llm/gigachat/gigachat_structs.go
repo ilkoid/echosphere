@@ -25,7 +25,27 @@ type GigachatChatCompletion struct {
 	Usage   GigachatUsage    `json:"usage"`
 }
 
-type GigachatAPI struct{}
+type GigachatAPI struct {
+	accessToken   string
+	completionURL string
+}
+
+var gigachatInstance *GigachatAPI
+
+func GetGigachatAPI() *GigachatAPI {
+	if gigachatInstance == nil {
+		accessToken, err := GetAccesToken()
+		if err != nil {
+			return nil
+		}
+		return &GigachatAPI{
+			accessToken:   accessToken,
+			completionURL: "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+		}
+	}
+
+	return gigachatInstance
+}
 
 type GigachatChatCompletionRequest struct {
 	Model    string                   `json:"model"`
