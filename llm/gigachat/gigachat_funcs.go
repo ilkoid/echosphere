@@ -85,8 +85,9 @@ func (g *GigachatAPI) GenerateResponse(review apis.ReviewCondensed, context stri
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", err
+		return "", fmt.Errorf("Response status code is not OK: %v", resp.StatusCode)
 	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
