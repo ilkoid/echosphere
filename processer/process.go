@@ -12,6 +12,7 @@ type Product struct {
 	ID     int // ImtId
 	TypeID int // NmId
 	Name   string
+	Photos []string // png
 }
 
 type ReviewProcessed struct {
@@ -57,6 +58,7 @@ func NewLLMReviewProcesser(language_model llm.LargeLanguageModelAPI, responseGen
 func (p LLMReviewProcesser) ProcessReviews(reviews []apis.ReviewCondensed) ([]ReviewProcessed, error) {
 	var res []ReviewProcessed
 	for _, reviewUnprocessed := range reviews {
+		
 		processed := ReviewProcessed{
 			ID:          reviewUnprocessed.ID,
 			PublishedAt: reviewUnprocessed.PublishedAt,

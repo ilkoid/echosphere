@@ -9,7 +9,26 @@ import (
 	"os"
 )
 
+func ConvertToByteSlice(photolink string) (string, error) {
+	fmt.Print(photolink)
+	response, err := http.Get(photolink)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(bodyBytes), nil
+}
+
 func ConvertWBReview(wbReview Feedback) apis.ReviewCondensed {
+	fmt.Print(len(wbReview.PhotoLinks))
+	for _, photolink := range wbReview.PhotoLinks {
+		_, err := ConvertToByteSlice(photolink.FullSize)
+		fmt.Print(err)
+	}
 	return apis.ReviewCondensed{
 		ID:          wbReview.ID,
 		PublishedAt: wbReview.CreatedDate,
@@ -20,6 +39,7 @@ func ConvertWBReview(wbReview Feedback) apis.ReviewCondensed {
 			ID:     wbReview.ProductDetails.NmId,  // NmId как ID товара
 			TypeID: wbReview.ProductDetails.ImtId, // ImtId как TypeID
 			Name:   wbReview.ProductDetails.ProductName,
+
 		},
 	}
 }

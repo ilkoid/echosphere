@@ -31,4 +31,5 @@ type Product struct {
 	ID     int // ImtId
 	TypeID int // NmId
 	Name   string
+	Photos []string
 }
