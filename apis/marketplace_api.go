@@ -28,7 +28,10 @@ type ReviewCondensed struct {
 }
 
 type Product struct {
-	ID     int // ImtId
-	TypeID int // NmId
-	Name   string
+	ID          int // ImtId
+	TypeID      int // NmId
+	Name        string
+	Description string
+	VendorCode  int
+	Photos      []string
 }
