@@ -5,7 +5,7 @@ import (
 	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
 	gigachat "echosphere/llm/gigachat"
-	processer "echosphere/process"
+	processer "echosphere/processer"
 	"fmt"
 	"net/http"
 )
