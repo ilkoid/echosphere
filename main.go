@@ -37,8 +37,8 @@ const (
 		product_vendor_code TEXT NOT NULL,
 		photo_id INTEGER NOT NULL,
 		PRIMARY KEY (product_vendor_code, photo_id),
-		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id),
-		FOREIGN KEY (photo_id) REFERENCES photos(id)
+		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id) ON DELETE CASCADE,
+		FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
 	);
 
 	CREATE TABLE IF NOT EXISTS reviews (
@@ -56,8 +56,8 @@ const (
 		review_id TEXT NOT NULL,
 		product_vendor_code TEXT NOT NULL,
 		PRIMARY KEY (review_id, product_vendor_code),
-		FOREIGN KEY (review_id) REFERENCES reviews(id),
-		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id)
+		FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id) ON DELETE CASCADE
 	);
 	`
 )
@@ -87,6 +87,10 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, review := range processedReviews {
+		var photos []domain.Photo
+		for _, photo := range review.Product.Photos {
+			photos = append(photos, domain.Photo{ByteSlice: photo})
+		}
 		err := sqlite.AddProduct(
 			domain.Product{
 				VendorId:    review.Product.VendorCode,
@@ -94,6 +98,7 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 				Name:        review.Product.Name,
 				Description: review.Product.Description,
 			},
+			photos...,
 		)
 		if err != nil {
 			fmt.Printf("Couldnt add the product to the db: %v\n", err)

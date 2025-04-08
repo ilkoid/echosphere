@@ -4,11 +4,14 @@ import (
 	"echosphere/apis"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"golang.org/x/image/webp"
 )
 
 type AdditionalProductData struct {
@@ -89,12 +92,53 @@ func RequestProductAdditionalData(wbKey string, nmID int) (AdditionalProductData
 	return additionalData, nil
 }
 
+func ConvertWebPIntoPNG(photoURL string) (string, error) {
+	response, err := http.Get(photoURL)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	img, err := webp.Decode(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	pngFile, err := os.Create("tmp/tmp.png")
+	if err != nil {
+		return "", nil
+	}
+	defer func() {
+		pngFile.Close()
+	}()
+
+	err = png.Encode(pngFile, img)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err = pngFile.Seek(0, io.SeekStart); err != nil {
+		return "", err
+	}
+
+	byteSlice, err := io.ReadAll(pngFile)
+	if err != nil {
+		return "", err
+	}
+
+	return string(byteSlice), nil
+}
+
 func ConvertWBReview(wbKey string, wbReview Feedback) apis.ReviewCondensed {
 	additionalData, _ := RequestProductAdditionalData(wbKey, wbReview.ProductDetails.NmId)
 
 	var photoByteSlices []string
-	for _, photo := range additionalData.Cards[0].Photos {
-		photoByteSlices = append(photoByteSlices, photo.Big)
+	for _, photoURL := range additionalData.Cards[0].Photos {
+		byteSlice, err := ConvertWebPIntoPNG(photoURL.Big)
+		if err != nil {
+			fmt.Println(err)
+		}
+		photoByteSlices = append(photoByteSlices, byteSlice)
 	}
 
 	return apis.ReviewCondensed{
