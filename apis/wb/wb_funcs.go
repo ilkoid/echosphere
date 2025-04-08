@@ -7,11 +7,16 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type AdditionalProductData struct {
-	VendorCode  int     `json:"vendorCode"`
+	Cards []Card `json:"cards"`
+}
+
+type Card struct {
+	VendorCode  string  `json:"vendorCode"`
 	Description string  `json:"description"`
 	Photos      []Photo `json:"photos"`
 }
@@ -33,16 +38,16 @@ type Settings struct {
 }
 
 type Filter struct {
-	ImtID int `json:"imtID"`
+	TextSearch string `json:"textSearch"`
 }
 
-func RequestProductAdditionalData(wbKey string, imtID int) (AdditionalProductData, error) {
+func RequestProductAdditionalData(wbKey string, nmID int) (AdditionalProductData, error) {
 	url := "https://content-api.wildberries.ru/content/v2/get/cards/list?locale=ru"
 
 	requestData := AdditionalProductDataRequest{
 		Settings{
 			Filter{
-				ImtID: imtID,
+				TextSearch: strconv.Itoa(nmID),
 			},
 		},
 	}
@@ -77,6 +82,7 @@ func RequestProductAdditionalData(wbKey string, imtID int) (AdditionalProductDat
 
 	var additionalData AdditionalProductData
 	if err := json.Unmarshal(body, &additionalData); err != nil {
+		fmt.Println(err)
 		return AdditionalProductData{}, err
 	}
 
@@ -84,10 +90,10 @@ func RequestProductAdditionalData(wbKey string, imtID int) (AdditionalProductDat
 }
 
 func ConvertWBReview(wbKey string, wbReview Feedback) apis.ReviewCondensed {
-	additionalData, _ := RequestProductAdditionalData(wbKey, wbReview.ProductDetails.ImtId)
+	additionalData, _ := RequestProductAdditionalData(wbKey, wbReview.ProductDetails.NmId)
 
 	var photoByteSlices []string
-	for _, photo := range additionalData.Photos {
+	for _, photo := range additionalData.Cards[0].Photos {
 		photoByteSlices = append(photoByteSlices, photo.Big)
 	}
 
@@ -101,8 +107,8 @@ func ConvertWBReview(wbKey string, wbReview Feedback) apis.ReviewCondensed {
 			ID:          wbReview.ProductDetails.NmId,  // NmId как ID товара
 			TypeID:      wbReview.ProductDetails.ImtId, // ImtId как TypeID
 			Name:        wbReview.ProductDetails.ProductName,
-			Description: additionalData.Description,
-			VendorCode:  additionalData.VendorCode,
+			Description: additionalData.Cards[0].Description,
+			VendorCode:  additionalData.Cards[0].VendorCode,
 			Photos:      photoByteSlices,
 		},
 	}
@@ -165,5 +171,6 @@ func (w *WBAPI) GetFeedback(config apis.FeedbackRequestConfig) ([]apis.ReviewCon
 		return []apis.ReviewCondensed{}, err
 	}
 
-	return ConvertWbIntoCondensed(wbKey, feedback), nil
+	wbAccessKey := os.Getenv("WB_API_CONTENT")
+	return ConvertWbIntoCondensed(wbAccessKey, feedback), nil
 }
