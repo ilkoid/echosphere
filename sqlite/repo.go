@@ -3,51 +3,9 @@ package sqlite
 import (
 	"database/sql"
 	"echosphere/repository/domain"
-)
+	"fmt"
 
-const (
-	schemaSQL = `
-	CREATE TABLE products (
-		vendor_id INTEGER NOT NULL,
-		wb_id INTEGER NOT NULL,
-		name TEXT,
-		description TEXT,
-		PRIMARY KEY (vendor_id)
-	);
-
-	CREATE TABLE photos (
-		id INTEGER PRIMARY KEY,
-		byte_slice BLOB,
-	);
-
-	CREATE TABLE product_photos (
-		product_vendor_code INTEGER NOT NULL,
-		photo_id INTEGER NOT NULL,
-		PRIMARY KEY (product_vendor_code, photo_id),
-		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id),
-		FOREIGN KEY (photo_id) REFERENCES photos(id)
-	);
-
-	CREATE TABLE reviews (
-		id INTEGER NOT NULL,
-		published_at TIMESTAMP NOT NULL,
-		rating INTEGER NOT NULL,
-		text TEXT,
-		published_response TEXT,
-		suggested_response TEXT,
-		mood TEXT,
-		key_words TEXT,
-		PRIMARY KEY (id)
-	);
-
-	CREATE TABLE review_of_product (
-		review_id INTEGER NOT NULL,
-		product_vendor_code INTEGER NOT NULL,
-		PRIMARY KEY (review_id, product_vendor_code),
-		FOREIGN KEY (review_id) REFERENCES reviews(id),
-		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id)
-	);
-	`
+	_ "modernc.org/sqlite"
 )
 
 type Repo struct {
@@ -57,6 +15,7 @@ type Repo struct {
 func New(filePath string) *Repo {
 	database, err := sql.Open("sqlite", filePath)
 	if err != nil {
+		fmt.Printf("Couldnt open database: %v", err)
 		return nil
 	}
 
