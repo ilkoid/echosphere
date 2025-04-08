@@ -108,10 +108,22 @@ func (r *Repo) AddProduct(product domain.Product, photos ...domain.Photo) error 
 
 	for _, photo := range photos {
 		var photo_id int
-		if err = r.sql.QueryRow("INSERT INTO photos (byte_slice) VALUES (?)", photo.ByteSlice).Scan(&photo_id); err != nil {
+		_, err = r.sql.Exec("INSERT INTO photos (byte_slice) VALUES (?)", photo.ByteSlice)
+		if err != nil {
+			tx.Rollback()
 			return err
 		}
-		_, err = r.sql.Exec("INSERT INTO products_photos (product_vendor_code, photo_id) VALUES (?, ?)", product.VendorId, photo_id)
+
+		if err = r.sql.QueryRow("SELECT id FROM photos WHERE byte_slice = ?", photo.ByteSlice).Scan(&photo_id); err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		_, err = r.sql.Exec("INSERT INTO product_photos (product_vendor_code, photo_id) VALUES (?, ?)", product.VendorId, photo_id)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	return tx.Commit()
@@ -120,15 +132,21 @@ func (r *Repo) AddProduct(product domain.Product, photos ...domain.Photo) error 
 func (r *Repo) AddReview(review domain.Review, product domain.Product) error {
 	tx, err := r.sql.Begin()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	_, err = r.sql.Exec("INSERT INTO reviews (id, published_at, rating, text, published_response, suggested_response, mood, key_words) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", review.Id, review.PublishedAt, review.Rating, review.Text, review.PublishedResponse, review.SuggestedResponse, review.Mood, review.KeyWords)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	_, err = r.sql.Exec("INSERT INTO review_of_product (review_id, product_vendor_code) VALUES (?, ?)", review.Id, product.VendorId)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 
 	return tx.Commit()
 }
