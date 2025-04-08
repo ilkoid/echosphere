@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type Product struct {
-	VendorId    int
+	VendorId    string
 	WBId        int
 	Name        string
 	Description string
@@ -14,12 +14,12 @@ type Photo struct {
 }
 
 type ProductPhotos struct {
-	ProductVendorCode int
+	ProductVendorCode string
 	PhotoId           int
 }
 
 type Review struct {
-	Id                int
+	Id                string
 	PublishedAt       time.Time
 	Rating            int
 	Text              string
@@ -30,6 +30,6 @@ type Review struct {
 }
 
 type ReviewOfProduct struct {
-	ReviewId          int
-	ProductVendorCode int
+	ReviewId          string
+	ProductVendorCode string
 }

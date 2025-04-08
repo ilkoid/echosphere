@@ -6,6 +6,7 @@ import (
 	"echosphere/google_sheets"
 	gigachat "echosphere/llm/gigachat"
 	processer "echosphere/processer"
+	"echosphere/repository/domain"
 	"echosphere/sqlite"
 	"fmt"
 	"net/http"
@@ -17,45 +18,43 @@ const (
 	spreadsheetID   = "1TKuEZvJsnqfkolxXtQzDPPUxdtDEVrtgjvCrVhnAA2o"
 	sheetRange      = "Лист1!A1:B"
 	credentialsFile = "/etc/google_sheets_credentials.json"
-	repoFilePath    = "repository/database.db"
+	repoFilePath    = "sqlite/database.db"
 
 	schemaSQL = `
-	CREATE TABLE products (
-		vendor_id INTEGER NOT NULL,
+	CREATE TABLE IF NOT EXISTS products(
+		vendor_id TEXT PRIMARY KEY,
 		wb_id INTEGER NOT NULL,
 		name TEXT,
-		description TEXT,
-		PRIMARY KEY (vendor_id)
+		description TEXT
 	);
 
-	CREATE TABLE photos (
+	CREATE TABLE IF NOT EXISTS photos (
 		id INTEGER PRIMARY KEY,
-		byte_slice BLOB,
+		byte_slice BLOB
 	);
 
-	CREATE TABLE product_photos (
-		product_vendor_code INTEGER NOT NULL,
+	CREATE TABLE IF NOT EXISTS product_photos (
+		product_vendor_code TEXT NOT NULL,
 		photo_id INTEGER NOT NULL,
 		PRIMARY KEY (product_vendor_code, photo_id),
 		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id),
 		FOREIGN KEY (photo_id) REFERENCES photos(id)
 	);
 
-	CREATE TABLE reviews (
-		id INTEGER NOT NULL,
+	CREATE TABLE IF NOT EXISTS reviews (
+		id TEXT PRIMARY KEY,
 		published_at TIMESTAMP NOT NULL,
 		rating INTEGER NOT NULL,
 		text TEXT,
 		published_response TEXT,
 		suggested_response TEXT,
 		mood TEXT,
-		key_words TEXT,
-		PRIMARY KEY (id)
+		key_words TEXT
 	);
 
-	CREATE TABLE review_of_product (
-		review_id INTEGER NOT NULL,
-		product_vendor_code INTEGER NOT NULL,
+	CREATE TABLE IF NOT EXISTS review_of_product (
+		review_id TEXT NOT NULL,
+		product_vendor_code TEXT NOT NULL,
 		PRIMARY KEY (review_id, product_vendor_code),
 		FOREIGN KEY (review_id) REFERENCES reviews(id),
 		FOREIGN KEY (product_vendor_code) REFERENCES products(vendor_id)
@@ -74,7 +73,10 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sqlite := sqlite.New(repoFilePath)
-	sqlite.Init(schemaSQL)
+	err := sqlite.Init(schemaSQL)
+	if err != nil {
+		fmt.Printf("Couldnt init the db: %v\n", err)
+	}
 
 	wb_reviews, _ := wb_api.GetFeedback(config)
 
@@ -82,6 +84,42 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	processedReviews, err := reviewProcesser.ProcessReviews(wb_reviews)
 	if err != nil {
 		fmt.Printf("Error was: %v\n", err)
+	}
+
+	for _, review := range processedReviews {
+		err := sqlite.AddProduct(
+			domain.Product{
+				VendorId:    review.Product.VendorCode,
+				WBId:        review.Product.ID,
+				Name:        review.Product.Name,
+				Description: review.Product.Description,
+			},
+		)
+		if err != nil {
+			fmt.Printf("Couldnt add the product to the db: %v\n", err)
+		}
+
+		err = sqlite.AddReview(
+			domain.Review{
+				Id:                review.ID,
+				PublishedAt:       review.PublishedAt,
+				Rating:            review.Rating,
+				Text:              review.Text,
+				PublishedResponse: "",
+				SuggestedResponse: review.Response,
+				Mood:              review.Mood,
+				KeyWords:          review.KeyWords,
+			},
+			domain.Product{
+				VendorId:    review.Product.VendorCode,
+				WBId:        review.Product.ID,
+				Name:        review.Product.Name,
+				Description: review.Product.Description,
+			},
+		)
+		if err != nil {
+			fmt.Printf("Couldnt add the review to the db: %v\n", err)
+		}
 	}
 
 	values := google_sheets.PrepareDataForSheets(processedReviews)
