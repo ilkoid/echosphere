@@ -13,7 +13,7 @@ type Product struct {
 	TypeID      int // NmId
 	Name        string
 	Description string
-	VendorCode  int
+	VendorCode  string
 	Photos      []string
 }
 
