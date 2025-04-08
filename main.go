@@ -8,6 +8,8 @@ import (
 	processer "echosphere/processer"
 	"fmt"
 	"net/http"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -41,6 +43,13 @@ func handle_wb(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func init() {
+	// loads values from .env into the system
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("No .env file found")
+	}
 }
 
 func main() {
