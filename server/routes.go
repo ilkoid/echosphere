@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 var gigachatAccessKeyCreationTime time.Time = time.Unix(0, 0)
@@ -36,10 +37,19 @@ func addRoutes(
 func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		wbApi := wb.WBAPI{}
+		file, _ := os.Open("config.yaml")
+		bytes, _ := io.ReadAll(file)
+		type Config struct {
+			IsAnswered bool `yaml:"is_answered"`
+			Take       int  `yaml:"take"`
+			Skip       int  `yaml:"skip"`
+		}
+		var conf Config
+		yaml.Unmarshal(bytes, &conf)
 		config := apis.FeedbackRequestConfig{
-			IsAnswered: false,
-			Take:       10,
-			Skip:       0,
+			IsAnswered: conf.IsAnswered,
+			Take:       conf.Take,
+			Skip:       conf.Skip,
 			DateFrom:   nil,
 			DateTo:     nil,
 		}
@@ -134,7 +144,6 @@ func ValidateOrCreateGigachatAccessKey(h http.Handler) http.Handler {
 		if err != nil {
 			fmt.Printf("Error decoding response")
 		}
-		// os.Setenv("GIGACHAT_ACCESS_TOKEN", response.AccessToken)
 		file, _ := os.Open(".env")
 		envVariables, _ := godotenv.Parse(file)
 		envVariables["GIGACHAT_ACCESS_TOKEN"] = response.AccessToken
