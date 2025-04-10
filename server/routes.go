@@ -1,11 +1,12 @@
 package server
 
 import (
-	"bytes"
-	"crypto/tls"
 	"echosphere/apis"
 	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
+
+	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -36,16 +37,21 @@ func addRoutes(
 
 func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		wbApi := wb.WBAPI{}
-		file, _ := os.Open("config.yaml")
-		bytes, _ := io.ReadAll(file)
 		type Config struct {
 			IsAnswered bool `yaml:"is_answered"`
 			Take       int  `yaml:"take"`
 			Skip       int  `yaml:"skip"`
 		}
+
+		wbApi := wb.WBAPI{}
+
+		file, _ := os.Open("config.yaml")
+		defer file.Close()
+
 		var conf Config
+		bytes, _ := io.ReadAll(file)
 		yaml.Unmarshal(bytes, &conf)
+
 		config := apis.FeedbackRequestConfig{
 			IsAnswered: conf.IsAnswered,
 			Take:       conf.Take,
@@ -99,7 +105,7 @@ func ValidateOrCreateGigachatAccessKey(h http.Handler) http.Handler {
 
 		req, err := http.NewRequest("POST", url, bytes.NewBufferString(data))
 		if err != nil {
-			fmt.Errorf("Error creating request: %v", err)
+			fmt.Printf("Error creating request: %v", err)
 		}
 
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -122,31 +128,37 @@ func ValidateOrCreateGigachatAccessKey(h http.Handler) http.Handler {
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 		}
+
 		resp, err := client.Do(req)
 		if err != nil {
 			fmt.Printf("Error sending request: %v", err)
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("Please forgive: %v", resp.StatusCode)
+			fmt.Printf("Response status is not okay: %v", resp.StatusCode)
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Printf("Error reading response: %v", err)
 		}
+
 		type Response struct {
 			AccessToken string `json:"access_token"`
 		}
+
 		var response Response
 		err = json.Unmarshal(body, &response)
-
 		if err != nil {
 			fmt.Printf("Error decoding response")
 		}
+
 		file, _ := os.Open(".env")
+		defer file.Close()
+
 		envVariables, _ := godotenv.Parse(file)
 		envVariables["GIGACHAT_ACCESS_TOKEN"] = response.AccessToken
+
 		godotenv.Write(envVariables, file.Name())
 		godotenv.Load()
 	}
