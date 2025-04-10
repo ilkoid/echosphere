@@ -12,11 +12,6 @@ type FeedbackRequestConfig struct {
 	DateTo     *time.Time
 }
 
-type MarketplaceAPI interface {
-	GetFeedback(config FeedbackRequestConfig) ([]ReviewCondensed, error)
-	// GetNumberUnanswered() (NumberOfUnanswered, error)
-}
-
 // TODO: ADD BARCODE
 type ReviewCondensed struct {
 	ID          string
