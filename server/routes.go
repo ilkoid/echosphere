@@ -1,9 +1,8 @@
 package server
 
 import (
-	wb "echosphere/apis/wb"
 	"echosphere/apis"
-	"echosphere/repository/domain"
+	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
 
 	"fmt"
@@ -42,17 +41,10 @@ func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
 		}
 
 		for _, review := range processedReviews {
-			var photos []domain.Photo
-			for _, photo := range review.Product.Photos {
-				photos = append(photos, domain.Photo{ByteSlice: photo})
-			}
+			product, photos := ConvertIntoDomainProduct(review)
+			domainReview := ConvertIntoDomainReview(review)
 			err := repository.AddProduct(
-				domain.Product{
-					VendorId:    review.Product.VendorCode,
-					WBId:        review.Product.ID,
-					Name:        review.Product.Name,
-					Description: review.Product.Description,
-				},
+				product,
 				photos...,
 			)
 			if err != nil {
@@ -60,22 +52,8 @@ func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
 			}
 
 			err = repository.AddReview(
-				domain.Review{
-					Id:                review.ID,
-					PublishedAt:       review.PublishedAt,
-					Rating:            review.Rating,
-					Text:              review.Text,
-					PublishedResponse: "",
-					SuggestedResponse: review.Response,
-					Mood:              review.Mood,
-					KeyWords:          review.KeyWords,
-				},
-				domain.Product{
-					VendorId:    review.Product.VendorCode,
-					WBId:        review.Product.ID,
-					Name:        review.Product.Name,
-					Description: review.Product.Description,
-				},
+				domainReview,
+				product,
 			)
 			if err != nil {
 				fmt.Printf("Couldnt add the review to the db: %v\n", err)
