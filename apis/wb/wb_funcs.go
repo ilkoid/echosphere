@@ -110,6 +110,7 @@ func ConvertWebPIntoPNG(photoURL string) (string, error) {
 	}
 	defer func() {
 		pngFile.Close()
+		os.Remove("tmp/tmp.png")
 	}()
 
 	err = png.Encode(pngFile, img)
