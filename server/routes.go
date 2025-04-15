@@ -66,25 +66,32 @@ func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
 			fmt.Printf("Error was: %v\n", err)
 		}
 
-		// for _, review := range processedReviews {
-		// 	product, photos := ConvertIntoDomainProduct(review)
-		// 	domainReview := ConvertIntoDomainReview(review)
-		// 	err := repository.AddProduct(
-		// 		product,
-		// 		photos...,
-		// 	)
-		// 	if err != nil {
-		// 		fmt.Printf("Couldnt add the product to the db: %v\n", err)
-		// 	}
+		for _, review := range processedReviews {
+			product, photos := ConvertIntoDomainProduct(review)
+			domainReview := ConvertIntoDomainReview(review)
 
-		// 	err = repository.AddReview(
-		// 		domainReview,
-		// 		product,
-		// 	)
-		// 	if err != nil {
-		// 		fmt.Printf("Couldnt add the review to the db: %v\n", err)
-		// 	}
-		// }
+			exists, err := repository.IsProductExist(product)
+			if err != nil {
+				fmt.Printf("Couldnt add the product to the db: %v\n", err)
+			}
+			if !exists {
+				err = repository.AddProduct(product, photos...)
+				if err != nil {
+					fmt.Printf("Couldnt add the product to the db: %v\n", err)
+				}
+			}
+
+			exists, err = repository.IsReviewExist(domainReview)
+			if err != nil {
+				fmt.Printf("Couldnt add the review to the db: %v\n", err)
+			}
+			if !exists {
+				err = repository.AddReview(domainReview, product)
+				if err != nil {
+					fmt.Printf("Couldnt add the review to the db: %v\n", err)
+				}
+			}
+		}
 
 		values := google_sheets.PrepareDataForSheets(processedReviews)
 		if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {

@@ -31,6 +31,24 @@ func (r Repo) Init(scheme string) error {
 	return nil
 }
 
+func (r Repo) IsProductExist(product domain.Product) (bool, error) {
+	var exists bool
+	if err := r.sql.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE vendor_id = ?)", product.VendorId).Scan(&exists); err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (r Repo) IsReviewExist(review domain.Review) (bool, error) {
+	var exists bool
+	if err := r.sql.QueryRow("SELECT EXISTS(SELECT 1 FROM reviews WHERE id = ?)", review.Id).Scan(&exists); err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 func (r Repo) GetByVendorId(id int) (domain.Product, error) {
 	var product domain.Product
 	if err := r.sql.QueryRow("SELECT * FROM products WHERE vendor_id = ?", id).Scan(&product.VendorId, &product.WBId, &product.Name, &product.Description); err != nil {

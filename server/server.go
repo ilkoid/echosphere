@@ -14,6 +14,9 @@ type ReviewProcesser interface {
 }
 
 type Repository interface {
+	IsProductExist(product domain.Product) (bool, error)
+	IsReviewExist(review domain.Review) (bool, error)
+
 	GetByVendorId(id int) (domain.Product, error)
 	GetProductPhotos(product domain.Product) ([]domain.Photo, error)
 	GetReview(reviewId int) (domain.Review, error)
