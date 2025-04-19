@@ -19,8 +19,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var gigachatAccessKeyCreationTime time.Time = time.Unix(0, 0)
-
 const (
 	spreadsheetID   = "1TKuEZvJsnqfkolxXtQzDPPUxdtDEVrtgjvCrVhnAA2o"
 	sheetRange      = "Лист1!A1:B"
@@ -32,7 +30,7 @@ func addRoutes(
 	processer ReviewProcesser,
 	repository Repository,
 ) {
-	mux.Handle("/wbfeedback", ValidateOrCreateGigachatAccessKey(wbHandler(repository, processer)))
+	mux.Handle("/wbfeedback", ValidateOrCreateGigachatAccessKeyTmp(wbHandler(repository, processer)))
 }
 
 func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
@@ -103,7 +101,7 @@ func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
 	})
 }
 
-func ValidateOrCreateGigachatAccessKey(h http.Handler) http.Handler {
+func ValidateOrCreateGigachatAccessKeyTmp(h http.Handler) http.Handler {
 	now := time.Now()
 	timeDifference := now.Unix() - gigachatAccessKeyCreationTime.Unix()
 	if !(timeDifference <= 30*60) {

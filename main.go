@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	gigachat "echosphere/llm/gigachat"
 	processer "echosphere/processer"
 	"echosphere/repository/sqlite"
@@ -9,12 +10,14 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"sync"
 
 	"github.com/joho/godotenv"
 )
 
 const (
-	repoFilePath    = "repository/sqlite/database.db"
+	repoFilePath = "repository/sqlite/database.db"
 
 	schemaSQL = `
 	CREATE TABLE IF NOT EXISTS products(
@@ -66,8 +69,10 @@ func init() {
 }
 
 func main() {
-	// http.HandleFunc("/wbfeedback", handle_wb)
-	//
+	context := context.Background()
+	context, cancel := signal.NotifyContext(context, os.Interrupt)
+	defer cancel()
+
 	sqlite := sqlite.New(repoFilePath)
 	if sqlite == nil {
 		fmt.Printf("Couldnt open the db\n")
@@ -84,15 +89,31 @@ func main() {
 		processer.LLMKeywordFinder{},
 	)
 
-	srv := server.New(reviewProcesser, *sqlite)
-
+	srv := server.New(reviewProcesser, sqlite)
 	httpSrv := http.Server{
 		Addr:    net.JoinHostPort("localhost", "8080"),
 		Handler: srv,
 	}
 
-	fmt.Printf("listening on %s\n", httpSrv.Addr)
-	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
-	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		server.RunProcesses(context, reviewProcesser, sqlite)
+
+		<-context.Done()
+		fmt.Println("Shutting down the server processes")
+		if err := httpSrv.Shutdown(context); err != nil {
+			fmt.Fprintf(os.Stderr, "error shutting down http server: %s\n", err)
+		}
+	}()
+
+	go func() {
+		fmt.Printf("listening on %s\n", httpSrv.Addr)
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
+		}
+	}()
+
+	wg.Wait()
 }

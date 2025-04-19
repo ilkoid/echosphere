@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"echosphere/repository/domain"
 	"fmt"
+	"sync"
 
 	_ "modernc.org/sqlite"
 )
 
 type Repo struct {
+	mu  sync.Mutex
 	sql *sql.DB
 }
 
@@ -24,14 +26,14 @@ func New(filePath string) *Repo {
 	}
 }
 
-func (r Repo) Init(scheme string) error {
+func (r *Repo) Init(scheme string) error {
 	if _, err := r.sql.Exec(scheme); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r Repo) IsProductExist(product domain.Product) (bool, error) {
+func (r *Repo) IsProductExist(product domain.Product) (bool, error) {
 	var exists bool
 	if err := r.sql.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE vendor_id = ?)", product.VendorId).Scan(&exists); err != nil {
 		return false, err
@@ -40,7 +42,7 @@ func (r Repo) IsProductExist(product domain.Product) (bool, error) {
 	return exists, nil
 }
 
-func (r Repo) IsReviewExist(review domain.Review) (bool, error) {
+func (r *Repo) IsReviewExist(review domain.Review) (bool, error) {
 	var exists bool
 	if err := r.sql.QueryRow("SELECT EXISTS(SELECT 1 FROM reviews WHERE id = ?)", review.Id).Scan(&exists); err != nil {
 		return false, err
@@ -49,7 +51,7 @@ func (r Repo) IsReviewExist(review domain.Review) (bool, error) {
 	return exists, nil
 }
 
-func (r Repo) GetByVendorId(id int) (domain.Product, error) {
+func (r *Repo) GetByVendorId(id int) (domain.Product, error) {
 	var product domain.Product
 	if err := r.sql.QueryRow("SELECT * FROM products WHERE vendor_id = ?", id).Scan(&product.VendorId, &product.WBId, &product.Name, &product.Description); err != nil {
 		return domain.Product{}, err
@@ -58,7 +60,7 @@ func (r Repo) GetByVendorId(id int) (domain.Product, error) {
 	return product, nil
 }
 
-func (r Repo) GetProductPhotos(product domain.Product) ([]domain.Photo, error) {
+func (r *Repo) GetProductPhotos(product domain.Product) ([]domain.Photo, error) {
 	var photos []domain.Photo
 
 	rows, err := r.sql.Query("SELECT photo_id FROM product_photos WHERE product_vendor_code = ?", product.VendorId)
@@ -90,7 +92,7 @@ func (r Repo) GetProductPhotos(product domain.Product) ([]domain.Photo, error) {
 	return photos, nil
 }
 
-func (r Repo) GetReview(reviewId int) (domain.Review, error) {
+func (r *Repo) GetReview(reviewId int) (domain.Review, error) {
 	var review domain.Review
 	if err := r.sql.QueryRow("SELECT * FROM reviews WHERE id = ?", reviewId).Scan(&review.Id, &review.PublishedAt, &review.Rating, &review.Text, &review.PublishedResponse, &review.SuggestedResponse, &review.Mood, &review.KeyWords); err != nil {
 		return domain.Review{}, err
@@ -99,7 +101,7 @@ func (r Repo) GetReview(reviewId int) (domain.Review, error) {
 	return review, nil
 }
 
-func (r Repo) GetProductOfReview(review domain.Review) (domain.Product, error) {
+func (r *Repo) GetProductOfReview(review domain.Review) (domain.Product, error) {
 	var productId int
 	if err := r.sql.QueryRow("SELECT product_vendor_code FROM review_of_product WHERE review_id = ?", review.Id).Scan(&productId); err != nil {
 		return domain.Product{}, err
@@ -113,7 +115,10 @@ func (r Repo) GetProductOfReview(review domain.Review) (domain.Product, error) {
 	return product, nil
 }
 
-func (r Repo) AddProduct(product domain.Product, photos ...domain.Photo) error {
+func (r *Repo) AddProduct(product domain.Product, photos ...domain.Photo) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	tx, err := r.sql.Begin()
 	if err != nil {
 		return err
@@ -147,7 +152,10 @@ func (r Repo) AddProduct(product domain.Product, photos ...domain.Photo) error {
 	return tx.Commit()
 }
 
-func (r Repo) AddReview(review domain.Review, product domain.Product) error {
+func (r *Repo) AddReview(review domain.Review, product domain.Product) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	tx, err := r.sql.Begin()
 	if err != nil {
 		tx.Rollback()
