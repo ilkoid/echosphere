@@ -176,3 +176,40 @@ func (r *Repo) AddReview(review domain.Review, product domain.Product) error {
 
 	return tx.Commit()
 }
+
+func (r *Repo) GetReviewsByCount(limit int) ([]domain.Review, error) {
+	query := `
+		SELECT id, rating, text, suggested_response, mood, key_words
+		FROM reviews
+		ORDER BY published_at DESC
+		LIMIT ?
+	`
+	rows, err := r.sql.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var reviews []domain.Review
+	for rows.Next() {
+		var review domain.Review
+
+		err := rows.Scan(
+			&review.Id,
+			&review.Rating,
+			&review.Text,
+			&review.SuggestedResponse,
+			&review.Mood,
+			&review.KeyWords,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, review)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return reviews, nil
+}

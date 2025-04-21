@@ -4,6 +4,7 @@ import (
 	"echosphere/apis"
 	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
+	"strconv"
 
 	"bytes"
 	"crypto/tls"
@@ -31,6 +32,52 @@ func addRoutes(
 	repository Repository,
 ) {
 	mux.Handle("/wbfeedback", ValidateOrCreateGigachatAccessKeyTmp(wbHandler(repository, processer)))
+	mux.Handle("/getreviews", getReviewsHandler(repository))
+}
+
+func getReviewsHandler(repository Repository) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		type ReviewResponse struct {
+			ID                string `json:"id"`
+			Text              string `json:"text"`
+			SuggestedResponse string `json:"suggested_response"`
+			Mood              string `json:"mood"`
+		}
+
+		countStr := r.URL.Query().Get("count")
+
+		count := 2
+		if countStr != "" {
+			var err error
+			count, err = strconv.Atoi(countStr)
+			if err != nil || count < 1 {
+				http.Error(w, "Invalid count parameter", http.StatusBadRequest)
+				return
+			}
+		}
+
+		reviews, err := repository.GetReviewsByCount(count)
+		if err != nil {
+			http.Error(w, "Failed to get reviews", http.StatusInternalServerError)
+			return
+		}
+
+		var response []ReviewResponse
+		for _, review := range reviews {
+			response = append(response, ReviewResponse{
+				ID:                review.Id,
+				Text:              review.Text,
+				SuggestedResponse: review.SuggestedResponse,
+				Mood:              review.Mood,
+			})
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	})
 }
 
 func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
