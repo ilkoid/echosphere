@@ -32,7 +32,7 @@ func addRoutes(
 	repository Repository,
 ) {
 	mux.Handle("/wbfeedback", ValidateOrCreateGigachatAccessKeyTmp(wbHandler(repository, processer)))
-	mux.Handle("/getreviews", getReviewsHandler(repository))
+	mux.Handle("/api/v1/reviews", getReviewsHandler(repository))
 }
 
 func getReviewsHandler(repository Repository) http.Handler {
@@ -44,21 +44,28 @@ func getReviewsHandler(repository Repository) http.Handler {
 			Mood              string `json:"mood"`
 		}
 
-		countStr := r.URL.Query().Get("count")
-
-		count := 2
-		if countStr != "" {
-			var err error
-			count, err = strconv.Atoi(countStr)
-			if err != nil || count < 1 {
-				http.Error(w, "Invalid count parameter", http.StatusBadRequest)
-				return
-			}
+		dateFromStr := r.URL.Query().Get("dateFrom")
+		if dateFromStr == "" {
+			http.Error(w, "Date parameter required", http.StatusBadRequest)
+			return
 		}
 
-		reviews, err := repository.GetReviewsByCount(count)
+		dateFrom, err := strconv.ParseInt(dateFromStr, 10, 64)
 		if err != nil {
-			http.Error(w, "Failed to get reviews", http.StatusInternalServerError)
+			http.Error(w, "Invalid date parameter", http.StatusBadRequest)
+			return
+		}
+
+		filter := Filter{
+			DateFrom: dateFrom,
+			Rating:   nil,
+			VendorId: "",
+		}
+
+		reviews, err := repository.GetReviewsByFilter(filter)
+		if err != nil {
+			errStr := fmt.Sprintf("Failed to get reviews: %v", err)
+			http.Error(w, errStr, http.StatusInternalServerError)
 			return
 		}
 
