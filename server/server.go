@@ -37,9 +37,15 @@ type Repository interface {
 	GetReview(reviewId int) (domain.Review, error)
 	GetProductOfReview(review domain.Review) (domain.Product, error)
 	GetReviewsByCount(count int) ([]domain.Review, error)
-
+	GetReviewsByFilter(filter Filter) ([]domain.Review, error)
 	AddProduct(product domain.Product, photos ...domain.Photo) error
 	AddReview(review domain.Review, product domain.Product) error
+}
+
+type Filter struct {
+	DateFrom int64
+	Rating   *int
+	VendorId string
 }
 
 type MarketplaceAPI interface {

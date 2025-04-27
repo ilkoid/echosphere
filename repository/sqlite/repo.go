@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"echosphere/repository/domain"
+	"echosphere/server"
 	"fmt"
 	"sync"
 
@@ -185,6 +186,43 @@ func (r *Repo) GetReviewsByCount(limit int) ([]domain.Review, error) {
 		LIMIT ?
 	`
 	rows, err := r.sql.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var reviews []domain.Review
+	for rows.Next() {
+		var review domain.Review
+
+		err := rows.Scan(
+			&review.Id,
+			&review.Rating,
+			&review.Text,
+			&review.SuggestedResponse,
+			&review.Mood,
+			&review.KeyWords,
+		)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, review)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return reviews, nil
+}
+
+func (r *Repo) GetReviewsByFilter(filter server.Filter) ([]domain.Review, error) {
+
+	query := `
+		SELECT id, rating, text, suggested_response, mood, key_words
+		FROM reviews
+		WHERE published_at > datetime(?, 'unixepoch')
+	`
+	rows, err := r.sql.Query(query, filter.DateFrom)
 	if err != nil {
 		return nil, err
 	}
