@@ -37,11 +37,26 @@ func addRoutes(
 
 func getReviewsHandler(repository Repository) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		type ReviewResponse struct {
+		type ReviewData struct {
 			ID                string `json:"id"`
 			Text              string `json:"text"`
+			Rating            int    `json:"rating"`
 			SuggestedResponse string `json:"suggested_response"`
 			Mood              string `json:"mood"`
+			KeyWords          string `json:"key_words"`
+		}
+
+		type ProductData struct {
+			WbId        int      `json:"wb_id"`
+			VendorId    string   `json:"vendor_id"`
+			Name        string   `json:"name"`
+			Description string   `json:"description"`
+			Photos      []string `json:"photos"`
+		}
+
+		type Response struct {
+			ReviewData  ReviewData  `json:"review"`
+			ProductData ProductData `json:"product"`
 		}
 
 		dateFromStr := r.URL.Query().Get("dateFrom")
@@ -61,21 +76,50 @@ func getReviewsHandler(repository Repository) http.Handler {
 			Rating:   nil,
 			VendorId: "",
 		}
+		ratingStr := r.URL.Query().Get("rating")
+		if ratingStr != "" {
+			rating, err := strconv.Atoi(ratingStr)
+			if err != nil {
+				http.Error(w, "Invalid rating parameter", http.StatusBadRequest)
+				return
+			}
+			filter.Rating = &rating
+		}
 
-		reviews, err := repository.GetReviewsByFilter(filter)
+		vendorId := r.URL.Query().Get("vendorId")
+		if vendorId != "" {
+			filter.VendorId = vendorId
+		}
+
+		cards, err := repository.GetCardsByFilter(filter)
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to get reviews: %v", err)
 			http.Error(w, errStr, http.StatusInternalServerError)
 			return
 		}
 
-		var response []ReviewResponse
-		for _, review := range reviews {
-			response = append(response, ReviewResponse{
-				ID:                review.Id,
-				Text:              review.Text,
-				SuggestedResponse: review.SuggestedResponse,
-				Mood:              review.Mood,
+		var response []Response
+		for _, card := range cards {
+			var photos []string
+			for _, photo := range card.Photos {
+				photos = append(photos, photo.ByteSlice)
+			}
+			response = append(response, Response{
+				ReviewData: ReviewData{
+					ID:                card.Review.Id,
+					Text:              card.Review.Text,
+					Rating:            card.Review.Rating,
+					SuggestedResponse: card.Review.SuggestedResponse,
+					Mood:              card.Review.Mood,
+					KeyWords:          card.Review.KeyWords,
+				},
+				ProductData: ProductData{
+					WbId:        card.Product.WBId,
+					VendorId:    card.Product.VendorId,
+					Name:        card.Product.Name,
+					Description: card.Product.Description,
+					Photos:      photos,
+				},
 			})
 		}
 

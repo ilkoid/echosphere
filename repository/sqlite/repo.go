@@ -178,76 +178,73 @@ func (r *Repo) AddReview(review domain.Review, product domain.Product) error {
 	return tx.Commit()
 }
 
-func (r *Repo) GetReviewsByCount(limit int) ([]domain.Review, error) {
+func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 	query := `
-		SELECT id, rating, text, suggested_response, mood, key_words
-		FROM reviews
-		ORDER BY published_at DESC
-		LIMIT ?
-	`
-	rows, err := r.sql.Query(query, limit)
+        SELECT r.id, r.published_at, r.rating, r.text, 
+               r.published_response, r.suggested_response, r.mood, r.key_words,
+               p.vendor_id, p.wb_id, p.name, p.description
+        FROM reviews r
+        JOIN review_of_product rop ON r.id = rop.review_id
+        JOIN products p ON rop.product_vendor_code = p.vendor_id
+        WHERE r.published_at >= datetime(?, 'unixepoch')
+    `
+	args := []interface{}{filter.DateFrom}
+
+	if filter.Rating != nil {
+		query += " AND r.rating = ?"
+		args = append(args, *filter.Rating)
+	}
+
+	if filter.VendorId != "" {
+		query += " AND p.vendor_id = ?"
+		args = append(args, filter.VendorId)
+	}
+
+	rows, err := r.sql.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query cards: %w", err)
 	}
 	defer rows.Close()
-	var reviews []domain.Review
+
+	var cards []server.Card
+
 	for rows.Next() {
 		var review domain.Review
+		var product domain.Product
 
 		err := rows.Scan(
 			&review.Id,
+			&review.PublishedAt,
 			&review.Rating,
 			&review.Text,
+			&review.PublishedResponse,
 			&review.SuggestedResponse,
 			&review.Mood,
 			&review.KeyWords,
+			&product.VendorId,
+			&product.WBId,
+			&product.Name,
+			&product.Description,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan card row: %w", err)
 		}
-		reviews = append(reviews, review)
-	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return reviews, nil
-}
-
-func (r *Repo) GetReviewsByFilter(filter server.Filter) ([]domain.Review, error) {
-
-	query := `
-		SELECT id, rating, text, suggested_response, mood, key_words
-		FROM reviews
-		WHERE published_at > datetime(?, 'unixepoch')
-	`
-	rows, err := r.sql.Query(query, filter.DateFrom)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var reviews []domain.Review
-	for rows.Next() {
-		var review domain.Review
-
-		err := rows.Scan(
-			&review.Id,
-			&review.Rating,
-			&review.Text,
-			&review.SuggestedResponse,
-			&review.Mood,
-			&review.KeyWords,
-		)
+		photos, err := r.GetProductPhotos(product)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get product photos: %w", err)
 		}
-		reviews = append(reviews, review)
+
+		cards = append(cards, server.Card{
+			Review:  review,
+			Product: product,
+			Photos:  photos,
+		})
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during rows iteration: %w", err)
 	}
 
-	return reviews, nil
+	return cards, nil
 }
