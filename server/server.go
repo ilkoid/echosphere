@@ -36,10 +36,15 @@ type Repository interface {
 	GetProductPhotos(product domain.Product) ([]domain.Photo, error)
 	GetReview(reviewId int) (domain.Review, error)
 	GetProductOfReview(review domain.Review) (domain.Product, error)
-	GetReviewsByCount(count int) ([]domain.Review, error)
-	GetReviewsByFilter(filter Filter) ([]domain.Review, error)
+	GetCardsByFilter(filter Filter) ([]Card, error)
 	AddProduct(product domain.Product, photos ...domain.Photo) error
 	AddReview(review domain.Review, product domain.Product) error
+}
+
+type Card struct {
+	Review  domain.Review
+	Product domain.Product
+	Photos  []domain.Photo
 }
 
 type Filter struct {
