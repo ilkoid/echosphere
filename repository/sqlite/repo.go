@@ -1,11 +1,12 @@
 package sqlite
 
 import (
+	"fmt"
+	"sync"
+
 	"database/sql"
 	"echosphere/repository/domain"
 	"echosphere/server"
-	"fmt"
-	"sync"
 
 	_ "modernc.org/sqlite"
 )
@@ -191,7 +192,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 	args := []interface{}{filter.DateFrom}
 
 	if filter.Rating != nil {
-		query += " AND r.rating = ?"
+		query += " AND r.rating >= ?"
 		args = append(args, *filter.Rating)
 	}
 
