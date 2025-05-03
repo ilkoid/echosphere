@@ -106,10 +106,11 @@ func ConvertWebPIntoPNG(photoURL string) (string, error) {
 
 	pngFile, err := os.Create("tmp/tmp.png")
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("Could not create tmp.png: tmp dir does not exist")
 	}
 	defer func() {
 		pngFile.Close()
+		os.Remove("tmp/tmp.png")
 	}()
 
 	err = png.Encode(pngFile, img)

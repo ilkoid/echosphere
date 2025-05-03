@@ -1,7 +1,6 @@
 package llm
 
 import (
-	"bufio"
 	"crypto/tls"
 	"echosphere/apis"
 	"echosphere/llm"
@@ -14,21 +13,21 @@ import (
 )
 
 func GetAccesToken() (string, error) {
-	tokenFilePath := "/etc/gigachat_credentials"
+	// tokenFilePath := "/etc/gigachat_credentials"
 
-	file, err := os.Open(tokenFilePath)
-	if err != nil {
-		return "", fmt.Errorf("Could not read from token file: %v", err)
-	}
-	defer file.Close()
+	// file, err := os.Open(tokenFilePath)
+	// if err != nil {
+	// 	return "", fmt.Errorf("Could not read from token file: %v", err)
+	// }
+	// defer file.Close()
 
-	var res string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		res = res + fmt.Sprint(scanner.Text())
-	}
+	// var res string
+	// scanner := bufio.NewScanner(file)
+	// for scanner.Scan() {
+	// 	res = res + fmt.Sprint(scanner.Text())
+	// }
 
-	return res, err
+	return os.Getenv("GIGACHAT_ACCESS_TOKEN"), nil
 }
 
 func (g *GigachatAPI) GenerateResponse(review apis.ReviewCondensed, context string) (string, error) {

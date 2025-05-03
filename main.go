@@ -1,24 +1,23 @@
 package main
 
 import (
-	"echosphere/apis"
-	wb "echosphere/apis/wb"
-	"echosphere/google_sheets"
+	"context"
 	gigachat "echosphere/llm/gigachat"
 	processer "echosphere/processer"
-	"echosphere/repository/domain"
-	"echosphere/sqlite"
+	"echosphere/repository/sqlite"
+	"echosphere/server"
 	"fmt"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
 
 	"github.com/joho/godotenv"
 )
 
 const (
-	spreadsheetID   = "1TKuEZvJsnqfkolxXtQzDPPUxdtDEVrtgjvCrVhnAA2o"
-	sheetRange      = "Лист1!A1:B"
-	credentialsFile = "/etc/google_sheets_credentials.json"
-	repoFilePath    = "sqlite/database.db"
+	repoFilePath = "repository/sqlite/database.db"
 
 	schemaSQL = `
 	CREATE TABLE IF NOT EXISTS products(
@@ -62,80 +61,6 @@ const (
 	`
 )
 
-func handle_wb(w http.ResponseWriter, r *http.Request) {
-	wb_api := wb.WBAPI{}
-	config := apis.FeedbackRequestConfig{
-		IsAnswered: false,
-		Take:       10,
-		Skip:       0,
-		DateFrom:   nil,
-		DateTo:     nil,
-	}
-
-	sqlite := sqlite.New(repoFilePath)
-	err := sqlite.Init(schemaSQL)
-	if err != nil {
-		fmt.Printf("Couldnt init the db: %v\n", err)
-	}
-
-	wb_reviews, _ := wb_api.GetFeedback(config)
-
-	reviewProcesser := processer.NewLLMReviewProcesser(gigachat.GetGigachatAPI(), processer.LLMResponseGenerator{}, processer.LLMMoodRecognizer{}, processer.LLMKeywordFinder{})
-	processedReviews, err := reviewProcesser.ProcessReviews(wb_reviews)
-	if err != nil {
-		fmt.Printf("Error was: %v\n", err)
-	}
-
-	for _, review := range processedReviews {
-		var photos []domain.Photo
-		for _, photo := range review.Product.Photos {
-			photos = append(photos, domain.Photo{ByteSlice: photo})
-		}
-		err := sqlite.AddProduct(
-			domain.Product{
-				VendorId:    review.Product.VendorCode,
-				WBId:        review.Product.ID,
-				Name:        review.Product.Name,
-				Description: review.Product.Description,
-			},
-			photos...,
-		)
-		if err != nil {
-			fmt.Printf("Couldnt add the product to the db: %v\n", err)
-		}
-
-		err = sqlite.AddReview(
-			domain.Review{
-				Id:                review.ID,
-				PublishedAt:       review.PublishedAt,
-				Rating:            review.Rating,
-				Text:              review.Text,
-				PublishedResponse: "",
-				SuggestedResponse: review.Response,
-				Mood:              review.Mood,
-				KeyWords:          review.KeyWords,
-			},
-			domain.Product{
-				VendorId:    review.Product.VendorCode,
-				WBId:        review.Product.ID,
-				Name:        review.Product.Name,
-				Description: review.Product.Description,
-			},
-		)
-		if err != nil {
-			fmt.Printf("Couldnt add the review to the db: %v\n", err)
-		}
-	}
-
-	values := google_sheets.PrepareDataForSheets(processedReviews)
-	if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to write to Google Sheets: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
 func init() {
 	// loads values from .env into the system
 	if err := godotenv.Load(); err != nil {
@@ -144,10 +69,51 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/wbfeedback", handle_wb)
+	context := context.Background()
+	context, cancel := signal.NotifyContext(context, os.Interrupt)
+	defer cancel()
 
-	fmt.Println("Server is running on http://localhost:8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf("Failed to start server: %v\n", err)
+	sqlite := sqlite.New(repoFilePath)
+	if sqlite == nil {
+		fmt.Printf("Couldnt open the db\n")
 	}
+	err := sqlite.Init(schemaSQL)
+	if err != nil {
+		fmt.Printf("Couldnt init the db: %v\n", err)
+	}
+
+	reviewProcesser := processer.NewLLMReviewProcesser(
+		gigachat.GetGigachatAPI(),
+		processer.LLMResponseGenerator{},
+		processer.LLMMoodRecognizer{},
+		processer.LLMKeywordFinder{},
+	)
+
+	srv := server.New(reviewProcesser, sqlite)
+	httpSrv := http.Server{
+		Addr:    net.JoinHostPort("localhost", "8080"),
+		Handler: srv,
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		server.RunProcesses(context, reviewProcesser, sqlite)
+
+		<-context.Done()
+		fmt.Println("Shutting down the server processes")
+		if err := httpSrv.Shutdown(context); err != nil {
+			fmt.Fprintf(os.Stderr, "error shutting down http server: %s\n", err)
+		}
+	}()
+
+	go func() {
+		fmt.Printf("listening on %s\n", httpSrv.Addr)
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
+		}
+	}()
+
+	wg.Wait()
 }
