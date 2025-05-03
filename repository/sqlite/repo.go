@@ -179,7 +179,7 @@ func (r *Repo) AddReview(review domain.Review, product domain.Product) error {
 	return tx.Commit()
 }
 
-func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
+func (r *Repo) GetDomainDataByFilter(filter server.Filter) ([]server.DomainData, error) {
 	query := `
         SELECT r.id, r.published_at, r.rating, r.text, 
                r.published_response, r.suggested_response, r.mood, r.key_words,
@@ -207,7 +207,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 	}
 	defer rows.Close()
 
-	var cards []server.Card
+	var cards []server.DomainData
 
 	for rows.Next() {
 		var review domain.Review
@@ -236,7 +236,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 			return nil, fmt.Errorf("failed to get product photos: %w", err)
 		}
 
-		cards = append(cards, server.Card{
+		cards = append(cards, server.DomainData{
 			Review:  review,
 			Product: product,
 			Photos:  photos,
