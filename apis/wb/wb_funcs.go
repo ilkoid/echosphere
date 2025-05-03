@@ -131,7 +131,10 @@ func ConvertWebPIntoPNG(photoURL string) (string, error) {
 }
 
 func ConvertWBReview(wbKey string, wbReview Feedback) apis.ReviewCondensed {
-	additionalData, _ := RequestProductAdditionalData(wbKey, wbReview.ProductDetails.NmId)
+	additionalData, err := RequestProductAdditionalData(wbKey, wbReview.ProductDetails.NmId)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	var photoByteSlices []string
 	for _, photoURL := range additionalData.Cards[0].Photos {
