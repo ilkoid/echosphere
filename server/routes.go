@@ -91,7 +91,7 @@ func getReviewsHandler(repository Repository) http.Handler {
 			filter.VendorId = vendorId
 		}
 
-		cards, err := repository.GetDomainDataByFilter(filter)
+		cards, err := repository.GetCardsByFilter(filter)
 		if err != nil {
 			errStr := fmt.Sprintf("Failed to get reviews: %v", err)
 			http.Error(w, errStr, http.StatusInternalServerError)
