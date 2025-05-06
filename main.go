@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
-	gigachat "echosphere/llm/gigachat"
-	processer "echosphere/processer"
-	"echosphere/repository/sqlite"
-	"echosphere/server"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
+
+	"echosphere/llm/yandexGPT"
+	"echosphere/processer"
+	"echosphere/repository/sqlite"
+	"echosphere/server"
 
 	"github.com/joho/godotenv"
 )
@@ -83,7 +84,7 @@ func main() {
 	}
 
 	reviewProcesser := processer.NewLLMReviewProcesser(
-		gigachat.GetGigachatAPI(),
+		yandexgpt.New(),
 		processer.LLMResponseGenerator{},
 		processer.LLMMoodRecognizer{},
 		processer.LLMKeywordFinder{},

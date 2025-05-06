@@ -11,6 +11,7 @@ type LargeLanguageModelAPI interface {
 	GenerateResponse(review apis.ReviewCondensed, context string) (string, error)
 	GetMood(review apis.ReviewCondensed, context string) (string, error)
 	FindKeywords(review apis.ReviewCondensed, context string) (string, error)
+	ValidateKey() error
 }
 
 type LlmRequestHeaders struct {
