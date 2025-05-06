@@ -31,25 +31,25 @@ type ReviewProcessed struct {
 
 type LLMReviewProcesser struct {
 	languageModel     *LanguageModel
-	responseGenerator *ResponseGenerator
-	moodRecognizer    *MoodRecognizer
-	keywordFinder     *KeywordFinder
+	responseGenerator ResponseGenerator
+	moodRecognizer    MoodRecognizer
+	keywordFinder     KeywordFinder
 }
 
 type LanguageModel struct {
-	Llm     *llm.LargeLanguageModelAPI
+	Llm     llm.LargeLanguageModelAPI
 	Context string
 }
 
 func NewLLMReviewProcesser(language_model llm.LargeLanguageModelAPI, responseGenerator ResponseGenerator, moodRecognizer MoodRecognizer, keywordFinder KeywordFinder) LLMReviewProcesser {
 	return LLMReviewProcesser{
 		languageModel: &LanguageModel{
-			Llm:     &language_model,
+			Llm:     language_model,
 			Context: "",
 		},
-		responseGenerator: &responseGenerator,
-		moodRecognizer:    &moodRecognizer,
-		keywordFinder:     &keywordFinder,
+		responseGenerator: responseGenerator,
+		moodRecognizer:    moodRecognizer,
+		keywordFinder:     keywordFinder,
 	}
 }
 
@@ -68,21 +68,25 @@ func (p LLMReviewProcesser) ProcessReviews(reviews []apis.ReviewCondensed) ([]Re
 			KeyWords:    "",
 		}
 
-		var err error
-		processed.Mood, err = (*p.moodRecognizer).GetReviewMood(reviewUnprocessed, p.languageModel)
+		err := p.languageModel.Llm.ValidateKey()
+		if err != nil {
+			return []ReviewProcessed{}, err
+		}
+
+		processed.Mood, err = p.moodRecognizer.GetReviewMood(reviewUnprocessed, p.languageModel)
 		if err != nil {
 			return res, fmt.Errorf("Could not get mood of the review: %v", err)
 		}
 
 		// p.languageModel.Context = fmt.Sprintf("Учитывай, что у отзыва следующее настроение: %s. ", processed.Mood)
-		processed.Response, err = (*p.responseGenerator).GenerateResponse(reviewUnprocessed, p.languageModel)
+		processed.Response, err = p.responseGenerator.GenerateResponse(reviewUnprocessed, p.languageModel)
 		if err != nil {
 			return res, fmt.Errorf("Could not generate response to the review: %v", err)
 		}
 
 		// there is no need in context for finding key words
 		// p.languageModel.Context = ""
-		processed.KeyWords, err = (*p.keywordFinder).FindKeywords(reviewUnprocessed, p.languageModel)
+		processed.KeyWords, err = p.keywordFinder.FindKeywords(reviewUnprocessed, p.languageModel)
 		if err != nil {
 			return res, fmt.Errorf("Could not find key words of the review: %v", err)
 		}
@@ -101,7 +105,7 @@ func (g LLMResponseGenerator) GenerateResponse(review apis.ReviewCondensed, lang
 	}
 
 	if review.Text != "" {
-		reviewResponse, err := (*language_model.Llm).GenerateResponse(review, language_model.Context)
+		reviewResponse, err := language_model.Llm.GenerateResponse(review, language_model.Context)
 		if err != nil {
 			return "", err
 		}
@@ -120,7 +124,7 @@ func (r LLMMoodRecognizer) GetReviewMood(review apis.ReviewCondensed, language_m
 	}
 
 	if review.Text != "" {
-		reviewMood, err := (*language_model.Llm).GetMood(review, language_model.Context)
+		reviewMood, err := language_model.Llm.GetMood(review, language_model.Context)
 		if err != nil {
 			return "", err
 		}
@@ -138,7 +142,7 @@ func (f LLMKeywordFinder) FindKeywords(review apis.ReviewCondensed, language_mod
 	}
 
 	if review.Text != "" {
-		reviewKeywords, err := (*language_model.Llm).FindKeywords(review, language_model.Context)
+		reviewKeywords, err := language_model.Llm.FindKeywords(review, language_model.Context)
 		if err != nil {
 			return "", err
 		}

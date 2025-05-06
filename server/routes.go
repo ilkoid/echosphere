@@ -1,22 +1,17 @@
 package server
 
 import (
-	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"echosphere/apis"
 	wb "echosphere/apis/wb"
 	"echosphere/google_sheets"
 	"strconv"
 
-	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +26,6 @@ func addRoutes(
 	processer ReviewProcesser,
 	repository Repository,
 ) {
-	mux.Handle("/wbfeedback", ValidateOrCreateGigachatAccessKeyTmp(wbHandler(repository, processer)))
 	mux.Handle("/api/v1/reviews", getReviewsHandler(repository))
 }
 
