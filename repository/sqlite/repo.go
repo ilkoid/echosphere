@@ -250,7 +250,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 	return cards, nil
 }
 
-func (r *Repo) UpdateReviewsWithPublishedResponse(updates []server.ReviewUpdate) error {
+func (r *Repo) UpdateReviews(updates []server.ReviewUpdate) error {
 	tx, err := r.sql.Begin()
 	if err != nil {
 		return err

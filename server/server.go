@@ -41,7 +41,7 @@ type Repository interface {
 	AddProduct(product domain.Product, photos ...domain.Photo) error
 	AddReview(review domain.Review, product domain.Product) error
 
-	UpdateReviewsWithPublishedResponse(updates []ReviewUpdate) error
+	UpdateReviews(updates []ReviewUpdate) error
 }
 
 type Card struct {
