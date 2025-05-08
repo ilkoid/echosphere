@@ -26,7 +26,33 @@ func addRoutes(
 	processer ReviewProcesser,
 	repository Repository,
 ) {
-	mux.Handle("/api/v1/reviews", getReviewsHandler(repository))
+	mux.Handle("/api/v1/reviews/list", getReviewsHandler(repository))
+	mux.Handle("/api/v1/reviews/publish", publishReviewsHandler(repository))
+}
+
+func publishReviewsHandler(repository Repository) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		updates, err := decode[[]ReviewUpdate](r)
+		if err != nil {
+			http.Error(w, "UpdateReviews struct could not be unmarshalled", http.StatusBadRequest)
+			return
+
+		}
+
+		// instead of this cycle will be post method to the WB
+		for _, update := range updates {
+			fmt.Println(update)
+		}
+
+		err = repository.UpdateReviews(updates)
+		if err != nil {
+			http.Error(w, "Error writing to the repository", http.StatusInternalServerError)
+			return
+
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
 }
 
 func getReviewsHandler(repository Repository) http.Handler {

@@ -57,8 +57,8 @@ type Filter struct {
 }
 
 type ReviewUpdate struct {
-	Id                string
-	PublishedResponse string
+	Id                string `json:"id"`
+	PublishedResponse string `json:"published_response"`
 }
 
 type MarketplaceAPI interface {
