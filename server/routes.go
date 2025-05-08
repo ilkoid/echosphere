@@ -31,11 +31,15 @@ func addRoutes(
 
 func publishReviewsHandler(repository Repository) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			http.Error(w, "This endpoint is POST method", http.StatusBadRequest)
+			return
+		}
+
 		updates, err := decode[[]ReviewUpdate](r)
 		if err != nil {
 			http.Error(w, "UpdateReviews struct could not be unmarshalled", http.StatusBadRequest)
 			return
-
 		}
 
 		// instead of this cycle will be post method to the WB
@@ -56,6 +60,11 @@ func publishReviewsHandler(repository Repository) http.Handler {
 
 func getReviewsHandler(repository Repository) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			http.Error(w, "This endpoint is GET method", http.StatusBadRequest)
+			return
+		}
+
 		type ReviewData struct {
 			ID                string `json:"id"`
 			Text              string `json:"text"`
