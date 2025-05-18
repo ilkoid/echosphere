@@ -1,17 +1,10 @@
 package server
 
 import (
+	server_structs "echosphere/server/structs"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-
-	"echosphere/apis"
-	wb "echosphere/apis/wb"
-	"echosphere/google_sheets"
 	"strconv"
-
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -37,7 +30,7 @@ func publishReviewsHandler(repository Repository, marketplace MarketplaceAPI) ht
 			return
 		}
 
-		updates, err := decode[[]MarketplaceResponse](r)
+		updates, err := decode[[]server_structs.MarketplaceResponse](r)
 		if err != nil {
 			http.Error(w, "UpdateReviews struct could not be unmarshalled", http.StatusBadRequest)
 			return
@@ -98,7 +91,7 @@ func getReviewsHandler(repository Repository) http.Handler {
 			return
 		}
 
-		filter := Filter{
+		filter := server_structs.Filter{
 			DateFrom: dateFrom,
 			Rating:   nil,
 			VendorId: "",
@@ -156,73 +149,5 @@ func getReviewsHandler(repository Repository) http.Handler {
 			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 			return
 		}
-	})
-}
-
-func wbHandler(repository Repository, processer ReviewProcesser) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		type Config struct {
-			IsAnswered bool `yaml:"is_answered"`
-			Take       int  `yaml:"take"`
-			Skip       int  `yaml:"skip"`
-		}
-
-		wbApi := wb.WBAPI{}
-
-		file, _ := os.Open("config.yaml")
-		defer file.Close()
-
-		var conf Config
-		bytes, _ := io.ReadAll(file)
-		yaml.Unmarshal(bytes, &conf)
-
-		config := apis.FeedbackRequestConfig{
-			IsAnswered: conf.IsAnswered,
-			Take:       conf.Take,
-			Skip:       conf.Skip,
-			DateFrom:   nil,
-			DateTo:     nil,
-		}
-
-		wb_reviews, _ := wbApi.GetFeedback(config)
-		processedReviews, err := processer.ProcessReviews(wb_reviews)
-		if err != nil {
-			fmt.Printf("Error was: %v\n", err)
-		}
-
-		for _, review := range processedReviews {
-			product, photos := ConvertIntoDomainProduct(review)
-			domainReview := ConvertIntoDomainReview(review)
-
-			exists, err := repository.IsProductExist(product)
-			if err != nil {
-				fmt.Printf("Couldnt add the product to the db: %v\n", err)
-			}
-			if !exists {
-				err = repository.AddProduct(product, photos...)
-				if err != nil {
-					fmt.Printf("Couldnt add the product to the db: %v\n", err)
-				}
-			}
-
-			exists, err = repository.IsReviewExist(domainReview)
-			if err != nil {
-				fmt.Printf("Couldnt add the review to the db: %v\n", err)
-			}
-			if !exists {
-				err = repository.AddReview(domainReview, product)
-				if err != nil {
-					fmt.Printf("Couldnt add the review to the db: %v\n", err)
-				}
-			}
-		}
-
-		values := google_sheets.PrepareDataForSheets(processedReviews)
-		if err := google_sheets.WriteReviewsToSheet(values, spreadsheetID, sheetRange, credentialsFile); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to write to Google Sheets: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
 	})
 }

@@ -6,7 +6,7 @@ import (
 
 	"database/sql"
 	"echosphere/repository/domain"
-	"echosphere/server"
+	server_structs "echosphere/server/structs"
 
 	_ "modernc.org/sqlite"
 )
@@ -179,7 +179,7 @@ func (r *Repo) AddReview(review domain.Review, product domain.Product) error {
 	return tx.Commit()
 }
 
-func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
+func (r *Repo) GetCardsByFilter(filter server_structs.Filter) ([]server_structs.Card, error) {
 	query := `
         SELECT r.id, r.published_at, r.rating, r.text, 
                r.published_response, r.suggested_response, r.mood, r.key_words,
@@ -207,7 +207,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 	}
 	defer rows.Close()
 
-	var cards []server.Card
+	var cards []server_structs.Card
 
 	for rows.Next() {
 		var review domain.Review
@@ -236,7 +236,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 			return nil, fmt.Errorf("failed to get product photos: %w", err)
 		}
 
-		cards = append(cards, server.Card{
+		cards = append(cards, server_structs.Card{
 			Review:  review,
 			Product: product,
 			Photos:  photos,
@@ -250,7 +250,7 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 	return cards, nil
 }
 
-func (r *Repo) UpdateReviews(updates []server.MarketplaceResponse) error {
+func (r *Repo) UpdateReviews(updates []server_structs.MarketplaceResponse) error {
 	tx, err := r.sql.Begin()
 	if err != nil {
 		return err
