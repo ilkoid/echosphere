@@ -41,7 +41,7 @@ type Repository interface {
 	AddProduct(product domain.Product, photos ...domain.Photo) error
 	AddReview(review domain.Review, product domain.Product) error
 
-	UpdateReviews(updates []ReviewUpdate) error
+	UpdateReviews(updates []MarketplaceResponse) error
 }
 
 type Card struct {
@@ -56,18 +56,25 @@ type Filter struct {
 	VendorId string
 }
 
-type ReviewUpdate struct {
-	Id                string `json:"id"`
-	PublishedResponse string `json:"published_response"`
+type MarketplaceResponse struct {
+	Id   string `json:"id"`
+	Text string `json:"text"`
 }
+
+// type MarketplaceResponse struct {
+// 	Id   string `json:"id"`
+// 	Text string `json:"text"`
+// }
 
 type MarketplaceAPI interface {
 	GetFeedback(config apis.FeedbackRequestConfig) ([]apis.ReviewCondensed, error)
+	PostResponses(responses []MarketplaceResponse) error
 }
 
 func New(
 	processer ReviewProcesser,
 	repository Repository,
+	marketplace MarketplaceAPI,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -75,6 +82,7 @@ func New(
 		mux,
 		processer,
 		repository,
+		marketplace,
 	)
 
 	var handler http.Handler = mux
