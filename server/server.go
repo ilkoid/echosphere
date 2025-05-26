@@ -78,7 +78,21 @@ func New(
 	)
 
 	var handler http.Handler = mux
+	handler = AuthMiddleware(handler)
 	return handler
+}
+
+func AuthMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := r.Header.Get("User")
+		password := r.Header.Get("Password")
+
+		if user == "admin" && password == "secret" {
+			handler.ServeHTTP(w, r)
+		} else {
+			http.Error(w, "Error 401: Unauthorised", http.StatusUnauthorized)
+		}
+	})
 }
 
 func RunProcesses(context context.Context, processer ReviewProcesser, repository Repository) {
