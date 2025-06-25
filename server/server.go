@@ -37,8 +37,11 @@ type Repository interface {
 	GetReview(reviewId int) (domain.Review, error)
 	GetProductOfReview(review domain.Review) (domain.Product, error)
 	GetCardsByFilter(filter Filter) ([]Card, error)
+
 	AddProduct(product domain.Product, photos ...domain.Photo) error
 	AddReview(review domain.Review, product domain.Product) error
+
+	UpdateReviews(updates []ReviewUpdate) error
 }
 
 type Card struct {
@@ -51,6 +54,11 @@ type Filter struct {
 	DateFrom int64
 	Rating   *int
 	VendorId string
+}
+
+type ReviewUpdate struct {
+	Id                string `json:"id"`
+	PublishedResponse string `json:"published_response"`
 }
 
 type MarketplaceAPI interface {
@@ -70,7 +78,21 @@ func New(
 	)
 
 	var handler http.Handler = mux
+	handler = AuthMiddleware(handler)
 	return handler
+}
+
+func AuthMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := r.Header.Get("User")
+		password := r.Header.Get("Password")
+
+		if user == "admin" && password == "secret" {
+			handler.ServeHTTP(w, r)
+		} else {
+			http.Error(w, "Error 401: Unauthorised", http.StatusUnauthorized)
+		}
+	})
 }
 
 func RunProcesses(context context.Context, processer ReviewProcesser, repository Repository) {

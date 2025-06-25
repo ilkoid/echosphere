@@ -249,3 +249,20 @@ func (r *Repo) GetCardsByFilter(filter server.Filter) ([]server.Card, error) {
 
 	return cards, nil
 }
+
+func (r *Repo) UpdateReviews(updates []server.ReviewUpdate) error {
+	tx, err := r.sql.Begin()
+	if err != nil {
+		return err
+	}
+
+	for _, update := range updates {
+		_, err := r.sql.Exec("UPDATE reviews SET published_response = ? WHERE id = ?", update.PublishedResponse, update.Id)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
