@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"echosphere/llm/yandexGPT"
+	mock "echosphere/mockups"
 	"echosphere/processer"
 	"echosphere/repository/sqlite"
 	"echosphere/server"
@@ -89,8 +90,8 @@ func main() {
 		processer.LLMMoodRecognizer{},
 		processer.LLMKeywordFinder{},
 	)
-
-	srv := server.New(reviewProcesser, sqlite)
+	marketplace := mock.MockMarketplace{}
+	srv := server.New(reviewProcesser, sqlite, &marketplace)
 	httpSrv := http.Server{
 		Addr:    net.JoinHostPort("localhost", "8080"),
 		Handler: srv,

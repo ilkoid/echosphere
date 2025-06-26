@@ -6,6 +6,7 @@ import (
 	"echosphere/google_sheets"
 	"echosphere/processer"
 	"echosphere/repository/domain"
+	server_structs "echosphere/server/structs"
 
 	"bytes"
 	"context"
@@ -36,38 +37,23 @@ type Repository interface {
 	GetProductPhotos(product domain.Product) ([]domain.Photo, error)
 	GetReview(reviewId int) (domain.Review, error)
 	GetProductOfReview(review domain.Review) (domain.Product, error)
-	GetCardsByFilter(filter Filter) ([]Card, error)
+	GetCardsByFilter(filter server_structs.Filter) ([]server_structs.Card, error)
 
 	AddProduct(product domain.Product, photos ...domain.Photo) error
 	AddReview(review domain.Review, product domain.Product) error
 
-	UpdateReviews(updates []ReviewUpdate) error
-}
-
-type Card struct {
-	Review  domain.Review
-	Product domain.Product
-	Photos  []domain.Photo
-}
-
-type Filter struct {
-	DateFrom int64
-	Rating   *int
-	VendorId string
-}
-
-type ReviewUpdate struct {
-	Id                string `json:"id"`
-	PublishedResponse string `json:"published_response"`
+	UpdateReviews(updates []server_structs.MarketplaceResponse) error
 }
 
 type MarketplaceAPI interface {
 	GetFeedback(config apis.FeedbackRequestConfig) ([]apis.ReviewCondensed, error)
+	PostResponses(responses []server_structs.MarketplaceResponse) error
 }
 
 func New(
 	processer ReviewProcesser,
 	repository Repository,
+	marketplace MarketplaceAPI,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -75,6 +61,7 @@ func New(
 		mux,
 		processer,
 		repository,
+		marketplace,
 	)
 
 	var handler http.Handler = mux

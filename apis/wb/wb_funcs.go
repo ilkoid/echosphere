@@ -2,6 +2,7 @@ package apis
 
 import (
 	"echosphere/apis"
+	server_structs "echosphere/server/structs"
 	"encoding/json"
 	"fmt"
 	"image/png"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/image/webp"
 )
@@ -221,4 +223,58 @@ func (w *WBAPI) GetFeedback(config apis.FeedbackRequestConfig) ([]apis.ReviewCon
 
 	wbAccessKey := os.Getenv("WB_API_CONTENT")
 	return ConvertWbIntoCondensed(wbAccessKey, feedback), nil
+}
+
+func (w *WBAPI) PostResponses(responses []server_structs.MarketplaceResponse) error {
+	wbKey := os.Getenv("WB_API_SAFE")
+
+	type ErrorResponse struct {
+		Title      string    `json:"title"`
+		Detail     string    `json:"detail"`
+		Code       string    `json:"code"`
+		RequestID  string    `json:"requestId"`
+		Origin     string    `json:"origin"`
+		Status     int       `json:"status"`
+		StatusText string    `json:"statusText"`
+		Timestamp  time.Time `json:"timestamp"`
+	}
+
+	url := fmt.Sprintf("https://feedbacks-api.wildberries.ru/api/v1/feedbacks/answer")
+	requestJson, err := json.Marshal(responses)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(requestJson)))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+wbKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Response status code is not OK: %v", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var response ErrorResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return err
+	}
+
+	if response.Status != http.StatusOK {
+		return fmt.Errorf("Wildberies responded with error: %v/n", response)
+	}
+
+	return nil
 }
